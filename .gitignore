@@ -109,7 +109,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-.ini
+env.ini
 
 # Spyder project settings
 .spyderproject
@@ -130,4 +130,4 @@ dmypy.json
 .pyre/
 
 # Documents
-.pdf
+*.pdf
