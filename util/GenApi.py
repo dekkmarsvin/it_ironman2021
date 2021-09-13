@@ -87,7 +87,7 @@ def GenOrderCreate(origin, cfg):
     print(f"iv:{iv}, key:{cfg.HashID}")
 
     import requests
-    url = "https://apisbx.sinopac.com/funBIZ/QPay.WebAPI/api/"
+    url = "https://apisbx.sinopac.com/funBIZ/QPay.WebAPI/api/Order"
 
     payload = body
     headers = {
@@ -123,6 +123,6 @@ if __name__ == '__main__':
     Hash = SimpleNamespace(A1 = env['App']['A1'], A2 = env['App']['A2'], B1 = env['App']['B1'], B2 = env['App']['B2'])
     cfg = SimpleNamespace(Version = env['App']['Version'], ShopNo = env['App']['ShopNo'], HashID = HashID(Hash))
     
-    org = APIModel.ReqOrderCreate(ShopNo=cfg.ShopNo, OrderNo="201807111119291750", Amount=60000, PayType="C", AutoBilling="Y", ExpMinutes=30, \
+    org = APIModel.ReqOrderCreate(ShopNo=cfg.ShopNo, OrderNo="202007111119291752", Amount=60000, PayType="C", AutoBilling="Y", ExpMinutes=30, \
         PrdtName="信用卡訂單", ReturnURL="http://10.11.22.113:8803/QPay.ApiClient-Sandbox/Store/Return", BackendURL="https://sandbox.sinopac.com/funBIZ.ApiClient/AutoPush/PushSuccess")
     GenOrderCreate(org, cfg)
