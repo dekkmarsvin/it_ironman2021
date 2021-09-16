@@ -13,6 +13,13 @@
   - [[day4] 安全簽章 - 產生訂單 & 簽章](#day4-安全簽章---產生訂單--簽章)
     - [準備訊息文本](#準備訊息文本)
     - [計算簽章Sign](#計算簽章sign)
+  - [[day5] Python發送Request接收Response與永豐API串接參數](#day5-python發送request接收response與永豐api串接參數)
+    - [Python實作 Request發送](#python實作-request發送)
+    - [永豐API參數](#永豐api參數)
+  - [[day6] AES-CBC 內文加密機制(Message)](#day6-aes-cbc-內文加密機制message)
+    - [實作計算IV](#實作計算iv)
+    - [AES CBC 計算實作](#aes-cbc-計算實作)
+    - [Python實作計算AES CBC](#python實作計算aes-cbc)
 
 ## [Day1] 金融支付API
 
@@ -334,3 +341,201 @@ def GenSign(origin, Nonce:str, HashID:str):
 ```
 
 如何產生簽章大家都會了嗎；阿好像忘了寫怎麼在Python內丟Request，明天補寫，斯米麻賽
+
+## [day5] Python發送Request接收Response與永豐API串接參數
+
+### Python實作 Request發送
+
+如果你的Python環境沒有requests模組
+
+```cmd
+pip install requests
+```
+
+向網站/網路資源請求資料(request)，主要有GET/POST兩種方式，如果溝通正常，通常會獲得回應response，除了資料外還會有一個http status code，關於網路HTTP具體技術細節這邊不會講解，有興趣可以自行Google
+
+個人建議會重複使用的常數都集中寫在設定檔案中，再用ConfigParser讀取，這樣可以統一修改整份專案的常數
+
+```ini
+[Server]
+#永豐消費支付API服務網址
+Api_URL = https://apisbx.sinopac.com/funBIZ/QPay.WebAPI/api/Order
+#永豐消費支付API-Nonce服務網址
+Nonce_URL = https://apisbx.sinopac.com/funBIZ/QPay.WebAPI/api/Nonce
+```
+
+API以Json格式溝通，建立一個基本的Json Headers
+
+```python
+jsonheaders = {
+    'Content-Type': 'application/json'
+}
+```
+
+實作發送request
+
+```python
+#讀取設定檔
+env = ConfigParser()
+env.read('env.ini')
+cfg = SimpleNamespace(Api_URL = env['Server']['Api_URL'], Nonce_URL = env['Server']['Nonce_URL'])
+
+#發送POST的request
+def sendreq(method="POST", url = None, headers=jsonheaders, data = None):
+  try:
+    response = requests.request(method=method, url=url, headers=headers, data=data)
+    return response
+  except Exception as err:
+    print(err)
+```
+
+產生JSON格式的Request實作
+
+```python
+def GenRequest(cfg, APIService, sign, nonce, message):
+  req = {'Version':cfg.Version, 'ShopNo':cfg.ShopNo, 'APIService':APIService, 'Sign':sign, 'Nonce': nonce, 'Message':message}
+  #ensure_ascii=False，關閉中文ascii轉換
+  js_req = json.dumps(req, indent=4, ensure_ascii=False)
+  return js_req
+```
+
+返回的Response中的參數定義可以參考[w3schools](https://www.w3schools.com/python/ref_requests_response.asp)，實際會使用到的只有statud_code與content
+
+```python
+#判斷是否Ok
+response.OK
+# TRUE/FALSE
+
+#將content轉成str
+response.text
+
+#將content轉成json
+response.json()
+```
+
+### 永豐API參數
+
+- 由永豐銀行指定的參數
+  - Version(API版本，現固定為1.0.0)
+  - ShopNo
+  - Nonce
+- 由店家自行產生
+  - APIService(e.g. OrderCreate、OrderQuery、OrderPayQuery.....)
+  - Sign(SHA256)
+    - JSON
+    - Nonce
+    - HashID
+  - Message(AES CBC)
+    - JSON
+    - HashID
+    - IV
+
+說明請見數位金流 API 技術規格文件p.13，以下為完成簽章與內文加密的完整Request
+
+```json
+{
+  "Version": "1.0.0",
+  "ShopNo": "NA0001_001",
+  "APIService": "OrderCreate",
+  "Sign": "7788EE61DD450944992641B3B2F8210B81A0AE97908BC19825F2A82C0F72EA43",
+  "Nonce": "NjM2NjY5MDQ3OTQwMzIuMTphZmJjODBhOTM5NzQ1NjMyNDFhZTczMjVjYzg0Mjg5ZjQxYTk2MWI2ZjNkYTA0NDdmOTRhZjU3ZTIzOWJlNDgz",
+  "Message": "4FE341D3A8C30C9A50573F3008F7B1CA8DD96FB2A4346D83936E5C4FDB21E87BA9E3D36A6635C6F5EBBD5438F3CA8FE97DEBB2ADBC82F92BF3C840B3128D8F00116536E7C936D7D587F6220C52C1367DF2BE9CBB16C6A7C6242AA8B38CD2E576328CF727E50FFA49B4F9FBE5DF10986C5299F9FC26E23E956AFDFB92B731FDA84ABEF1C89E0CD0A8CA8F7C23DC2D06E12A6F916EC47CDD9B4D4F87AC0B687EE1088A19F2C35C0FD8B0C97745B926FBAA48FEEDEB826C2C22743DB46781FF220ECA409FC150908540271E60184729C08C73275C54125C3F814FF33CA79A0E1B3902D446925FCC8235809FCBAB7E372D8C29E424CEFF0AD1CBD41E843714EB365158F2FC0B2E6FB48176D5CFF6B68F4BED4D7484C1A4723ABD059DA64A6703B30B0199B170FDF059899552FA1818ABA5B0D0E21014513985A738D59851EDF0B1CFB36A7B7B727109BE7789D284C75E5D694DFC9B7060DCBFD8C7915C95C4E0F29B"
+}
+```
+
+最後一個Message參數怎麼看不懂，安啦明天將說明如何進行內文的ABS CBC加密
+
+## [day6] AES-CBC 內文加密機制(Message)
+
+訊息文本使用AES-CBC模式加密傳送，接收的結果亦以相同規則加密
+
+必要的參數|如何取得
+---|---
+JSON訊息文本|[Day3](https://ithelp.ithome.com.tw/articles/10263834)
+HashID|[Day3](https://ithelp.ithome.com.tw/articles/10263834)
+IV|[Nonce](https://ithelp.ithome.com.tw/articles/10263682)做SHA256後轉大寫後16碼
+
+### 實作計算IV
+
+假設本次取得的Nonce為:NjM3NjczODg3Mjc5MTYuNjo1ZDI5ZTQ3YjBlNzY2NTc4ODI3YzM0ZjdiMjlmYjg0MWQ3Y2NlYzI5NmM0NjI2MzA3NWRkYTNlNzQ1NzdhMWY4
+
+字串進行sha256後:54164b54f6f9366b8377dd69b43e9970b0c95dee26be66402d3e2ea879b80c63
+
+IV為字串尾端16碼的英文大寫:2D3E2EA879B80C63
+
+Python實作如下
+
+```python
+def GenIV(Nonce:str):
+  return hashlib.sha256(Nonce.encode('utf-8')).hexdigest().upper()[-16:]
+```
+
+### AES CBC 計算實作
+
+如果對密碼學有興趣，可以自己Google，這邊直接用先前iphone的訂單進行實作
+
+```json
+{
+    "ShopNo": "NA0249_001",
+    "OrderNo": "2021091500002",
+    "Amount": 40400,
+    "CurrencyID": "TWD",
+    "PrdtName": "IPhone 13 Pro Max 256g",
+    "Memo": "",
+    "Param1": "",
+    "Param2": "",
+    "Param3": "",
+    "ReturnURL": "https://0.0.0.0/store/Return",
+    "BackendURL": "https://0.0.0.0/bakcend",
+    "PayType": "C",
+    "ATMParam": {
+        "ExpireDate": ""
+    },
+    "CardParam": {
+        "AutoBilling": "Y",
+        "ExpBillingDays": 7,
+        "ExpMinutes": 10,
+        "PayTypeSub": "ONE"
+    }
+}
+```
+
+假設這次取得的nonce為:NjM3Njc0MDQxODY5OTYuNDowNDIxNTg3ODM5MDFhNTU1ZjYwYzMzMzg0NDEyMzUxNmQ5OTBlZWU1NDY2NjY2NDkyZjE5YTc3OTE2ZDExNjNh
+
+計算出IV:3C7B67201DC59932
+
+假設金鑰為:
+
+- A1 = 86D50DEF3EB7400E
+- A2 = 01FD27C09E5549E5
+- B1 = 9E004965F4244953
+- B2 = 7FB3385F414E4F91
+
+HashID為:87282A2FA0E209EBE1B3713AB56A06C2
+
+將訊息文本以AES-CBC模式加密，Key Size=256，AESKEY=HashID，IV，以16進制HEX模式輸出的結果:
+
+16D2F25D277F33FC46D1B8B8D693416F159CE3E8E62B829EB0D6E3D0863B50F07D6C2240EC73EE47459C8E06992D6F59B50831B52A80429A86AB01FF6149E12500162C68DE232D3777E097FE4F58BEDC238B0105D3826E8CC3A69CDF946B5513517AD89E9C966DD41A82A3FF6CAA22DCB8FCAD28614444CE5272D121792083D6F9401DAF6890792C46D7A918785280224A04FD25E58421021141F5C21FCA4341328887657D20AD82CA99D2F42761F9BAC6911AF835799356A8A4647CD097DCEA88D7DD3DA57CACCA572711D7C248B10894F7E62A3B1A675F1EFDF9B4FB3B3C7F110F9F27875E6F44647F54881E6FCF1CB3709C38462D2B52BCC871CA88EFA86EF4D890615C107528C4AA90CF79B87FF3569ED3F7C5B47837E2706E11A381B5219F904D5CF01B8D32B4FB994544924CE5A37F520B12B759E734596CA0472066341444DB811138F96F16E8A6E50370D8032C777C23C1700DF8784B1B68562827CA6765BE64C1F5F8F7BE9205FC35F1D998DE6715407CC0AE48434738B016FCF497E3DB001C158F5C639A2A40F429BA56E6B6587433B851DBEF723218CE6315F67DA19D0EAF121745F867F8A6EC174B37CC799534C2422354C326A2D4D3E64BDBA164D053FD6B02557A34291C3B364C2003E38724DF077E41627D0D90684138D7A42C418C026BD1292A4976327989E13BDEFCF3643E2E7136594ADC5FE5612EA3B1042C1593AB3CF6A32354E5E066FF3DF3
+
+可以使用[devglan](https://www.devglan.com/online-tools/aes-encryption-decryption)進行加解密驗證測試
+
+### Python實作計算AES CBC
+
+參考[此篇](https://pycryptodome.readthedocs.io/en/latest/src/installation.html)進行PyCryptodome套件安裝
+
+```python
+from Cryptodome.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
+
+def AES_CBC_Encrpt(HashID, iv, data):
+  key = str.encode(HashID)
+  iv = str.encode(iv)
+  data = str.encode(data)
+  cipher = AES.new(key=key, mode=AES.MODE_CBC, iv=iv)
+  ct_bytes = cipher.encrypt(pad(data, AES.block_size))
+  return ct_bytes.hex().upper()
+
+ciphertext = AES_CBC_Encrpt(HashID, iv, origin_Message)
+```
+
+現在已經湊齊發送API的所有參數(ShopNo、APIServer、Sign、Nonce、Message)了，明天將正式的將訂單資訊傳送到永豐的API伺服器，並測試功能

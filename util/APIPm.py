@@ -1,15 +1,13 @@
 import requests
-
-apiservice = "https://apisbx.sinopac.com/funBIZ/QPay.WebAPI/api/Order"
-nonceservice = "https://apisbx.sinopac.com/funBIZ/QPay.WebAPI/api/Nonce"
+from configparser import ConfigParser
 
 jsonheaders = {
     'Content-Type': 'application/json'
 }
 
-def sendreq(method="POST", url = apiservice, headers=jsonheaders, data = None):
+def sendreq(method="POST", url = None, headers=jsonheaders, data = None):
     try:
-        response = requests.request(method=method, url=url, headers=headers, data=data)
+        response = requests.request(method=method, url=url, headers=headers, data=data, timeout=10)
         return response
     except Exception as err:
         print(err)

@@ -103,7 +103,7 @@ def OrderCreate(origin, cfg):
     iv = GenIV(nonce)
     msg = GenMessage(iv, origin, cfg.HashID)
     body = GenRequest(cfg=cfg, APIService="OrderCreate", sign=sign, nonce=nonce, message=msg)
-    resp = APIPm.sendreq(data=body)
+    resp = APIPm.sendreq(url=cfg.Api_URL ,data=body)
     funbiz_msg = Response_Decrypt(resp, cfg.HashID)
     return funbiz_msg
 
@@ -117,14 +117,15 @@ def GenOrderPayQuery(cfg):
 
 def GetNonce(cfg):
     payload = json.dumps({"ShopNo":cfg.ShopNo}, indent=4)
-    resp = APIPm.sendreq(url=APIPm.nonceservice, data=payload)
+    resp = APIPm.sendreq(url=cfg.Nonce_URL, data=payload)
     return json.loads(resp.text)['Nonce']
 
 if __name__ == '__main__':
     env = ConfigParser()
     env.read('env.ini')
     Hash = SimpleNamespace(A1 = env['App']['A1'], A2 = env['App']['A2'], B1 = env['App']['B1'], B2 = env['App']['B2'])
-    cfg = SimpleNamespace(Version = env['App']['Version'], ShopNo = env['App']['ShopNo'], HashID = HashID(Hash))
+    cfg = SimpleNamespace(Version = env['App']['Version'], ShopNo = env['App']['ShopNo'], HashID = HashID(Hash), \
+        Api_URL = env['Server']['Api_URL'], Nonce_URL = env['Server']['Nonce_URL'])
     
     # org = APIModel.ReqOrderCreate(ShopNo=cfg.ShopNo, OrderNo="202007111119291751", Amount=60000, PayType="C", AutoBilling="Y", ExpMinutes=30, \
     #     PrdtName="信用卡訂單", ReturnURL="http://10.11.22.113:8803/QPay.ApiClient-Sandbox/Store/Return", BackendURL="https://sandbox.sinopac.com/funBIZ.ApiClient/AutoPush/PushSuccess")
@@ -136,3 +137,4 @@ if __name__ == '__main__':
     msg, OK = OrderCreate(neworder, cfg)
     if(OK):print("建立訂單成功")
     else:print("建立訂單失敗")
+    print(msg)
