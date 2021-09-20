@@ -21,6 +21,10 @@
     - [AES CBC 計算實作](#aes-cbc-計算實作)
     - [Python實作計算AES CBC](#python實作計算aes-cbc)
   - [[day7] API回覆內容(Response)解析 & 驗證(sign)](#day7-api回覆內容response解析--驗證sign)
+    - [訊息文本AES CBC 解密](#訊息文本aes-cbc-解密)
+    - [以Python實作解密Message](#以python實作解密message)
+    - [驗算Respnse中Sign](#驗算respnse中sign)
+    - [以Python實作驗算Response Sign](#以python實作驗算response-sign)
 
 ## [Day1] 金融支付API
 
@@ -189,8 +193,8 @@ def ReqOrderCreate(ShopNo = "", OrderNo = "", Amount = 0, CurrencyID = "TWD", Pr
 - 訂單編號:2021091500001
 - 金額:40400
 - 收款名稱:IPhone 13 Pro Max 256g
-- 付款完成頁面:https://0.0.0.0/store/Return
-- 主機端:https://0.0.0.0/bakcend
+- 付款完成頁面:<https://0.0.0.0/store/Return>
+- 主機端:<https://0.0.0.0/bakcend>
 - 付款方式:信用卡
   - 使用自動請款
   - 一次付清
@@ -543,6 +547,8 @@ ciphertext = AES_CBC_Encrpt(HashID, iv, origin_Message)
 
 ## [day7] API回覆內容(Response)解析 & 驗證(sign)
 
+### 訊息文本AES CBC 解密
+
 將昨天產生產生的訊息文本，傳送至測試伺服器<https://apisbx.sinopac.com/funBIZ/QPay.WebAPI/api/Order>，如果沒有問題的話會收到如下訊息:
 
 ```json
@@ -561,3 +567,58 @@ ciphertext = AES_CBC_Encrpt(HashID, iv, origin_Message)
 - Nonce:NjM3Njc0NzY1MDExMjc6MjVmMDE2NDUyYThjNDE4ODY1MmI4Mzk0OGM3YWY1Mjg0M2Y4NDdlMjAyMTk0YWM3MGFhZGZmNDcyMGQ5ZjhjNw==
 - AESKey(HashID):87282A2FA0E209EBE1B3713AB56A06C2
 - IV:15FE64E9D28D8934
+
+將Message欄位取出，以**Hex**方式讀取，同樣用AES-CBC(256bits)方式進行解密，會得出
+
+```json
+{"OrderNo":"2021091500002","ShopNo":"NA0249_001","TSNo":"NA024900000173","Amount":40400,"Status":"S","Description":"S0000 – 處理成功","Param1":"","Param2":"","Param3":"","PayType":"C","CardParam":{"CardPayURL":"https://sandbox.sinopac.com/QPay.WebPaySite/Bridge/PayCard?TD=NA024900000173&TK=a135ccb2-2e4c-4af4-b4ef-dfece6367731"}}
+```
+
+### 以Python實作解密Message
+
+```python
+def AES_CBC_Decrypt(HashID, iv, data):
+  try:
+    key = str.encode(HashID)
+    iv = str.encode(iv)
+    data = bytes.fromhex(data)
+    cipher = AES.new(key=key, mode=AES.MODE_CBC, iv=iv)
+    pt = unpad(cipher.decrypt(data), AES.block_size)
+    return pt.decode("utf-8")
+  except (ValueError, KeyError):
+    print("Incorrect decryption")
+
+undecrypt_msg = js_resp['Message']
+msg = AES_CBC_Decrypt(HashID, iv=iv, data=undecrypt_msg)
+```
+
+### 驗算Respnse中Sign
+
+看到這邊，你一定想哇成功了對不對，其實還沒有，還少了最後一步，簽名驗證(Sign)，收發的資訊傳輸過程都需要驗證訊息文本與金鑰的配對，以確認資料的防竄改，關於如何產生Sign，可以[參照Day4](https://ithelp.ithome.com.tw/articles/10264251)，在這邊我們要取訊息文本中的Sign，與解密後Message中的參數進行比對是否相同
+
+### 以Python實作驗算Response Sign
+
+```python
+def GetRespSign(msg:str, nonce:str, HashID:str):
+  msg = json.loads(msg)
+  SignStr = ""
+  for parm in sorted(msg, key=lambda v: v.upper()):
+      val = msg[parm]
+      if(type(val) == dict or not val):continue
+      SignStr = SignStr + f"{parm}={msg[parm]}&"
+  SignStr = SignStr.removesuffix('&') + nonce + HashID
+  sign = hashlib.sha256(SignStr.encode('utf-8')).hexdigest().upper()
+  return sign
+
+resp_vsign = js_resp['Sign']
+resp_csign = GetRespSign(msg=msg, nonce=nonce, HashID=HashID)
+
+if(resp_vsign == resp_csign):
+  print("簽章檢驗成功")
+  return true
+else:
+  print("簽章驗證失敗")
+  return false
+```
+
+呼，到現在已經將大致上的API如何使用完成時做了，接下來準備小跑進入實作環節，搭建一個儲值卡系統~~希望有時間做得完~~
