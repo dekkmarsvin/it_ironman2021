@@ -25,6 +25,18 @@
     - [以Python實作解密Message](#以python實作解密message)
     - [驗算Respnse中Sign](#驗算respnse中sign)
     - [以Python實作驗算Response Sign](#以python實作驗算response-sign)
+  - [[day8] 實務搭建 - 儲值卡，系統概述](#day8-實務搭建---儲值卡系統概述)
+    - [會員卡功能 - 需求分析](#會員卡功能---需求分析)
+    - [資料庫結構](#資料庫結構)
+    - [前端實作](#前端實作)
+    - [後端實作](#後端實作)
+  - [[day9] 建置SQL DB](#day9-建置sql-db)
+    - [初始化資料庫](#初始化資料庫)
+    - [使用Python調用sqlite3](#使用python調用sqlite3)
+      - [載入資料庫](#載入資料庫)
+      - [初始化資料庫(執行SQL檔案)](#初始化資料庫執行sql檔案)
+      - [新增一個測試帳號(插入資料至指定Table)](#新增一個測試帳號插入資料至指定table)
+      - [查詢User資料(SELECT from Table)](#查詢user資料select-from-table)
 
 ## [Day1] 金融支付API
 
@@ -622,3 +634,174 @@ else:
 ```
 
 呼，到現在已經將大致上的API如何使用完成時做了，接下來準備小跑進入實作環節，搭建一個儲值卡系統~~希望有時間做得完~~
+
+## [day8] 實務搭建 - 儲值卡，系統概述
+
+將錢先放到你的金卡，可以享大大大優惠，點點卡、OO卡、XX卡、網咖等都是先儲值再消費，這邊將實作一個基本的儲值卡系統，並將儲值的金流部分串接永豐API
+
+在打開手機上的點點卡App後，可以大致整理出，一個會員卡系統，具有下列功能:
+
+1. 儲值
+   1. 信用卡儲值
+   2. ATM儲值
+   3. 臨櫃儲值
+2. 消費
+   1. 商品瀏覽
+   2. 訂單系統
+
+### 會員卡功能 - 需求分析
+
+在正式開始實作前，盤整整個專案功能實現的目的與方式:
+
+功能|說明|實作方式
+---|---|---
+建立會員(卡)|配發每個會員一組UID，以供識別|SQL
+修改會員資料|修改UID對應的會員資料|SQL
+儲值紀錄|紀錄金流出入流程|SQL
+儲值金額|儲值會員卡餘額|SQL
+消費金額|對應訂單系統、後台系統，降低餘額|SQL
+商品訂購|查詢庫存、品項ID|SQL
+訂單出貨|消耗庫存、扣款|SQL
+前端顯示|提供功能參數、輸入動作|Web or LineBot
+後端處理|實作功能、SQL查詢、金流API串接|Python
+
+### 資料庫結構
+
+- User
+  - UID
+  - User Type
+  - 客戶名稱
+  - 密碼(加密方式還在想)
+  - 其他個資
+- Card log
+  - 金流流水號
+  - 功能使用(儲值 or 消費)
+  - 成立(True or False)
+  - 來源
+- Order
+  - 出貨單流水號
+  - 詳細訂單資料...
+  - 是否成立(允許出貨)
+  - 是否完成(客戶已確認收到)
+
+### 前端實作
+
+目前規劃用LineBot或是搭建簡單的Web網站來進行
+
+### 後端實作
+
+使用Python串接各種功能(接收前端參數，功能調用，排程處理)
+
+今天大概先這樣，明天將進行資料庫搭建作業~~絕對不是偷懶~~
+
+## [day9] 建置SQL DB
+
+使用sqlite3建置一個本機資料庫，當然要用mssql或自己掛Docker DB也可以
+
+### 初始化資料庫
+
+暫時先行，可能後續再依據實際開發狀況修改，以下為資料庫結構創建SQL
+
+```sql
+BEGIN TRANSACTION;
+CREATE TABLE IF NOT EXISTS "Users" (
+	"UID"	INTEGER NOT NULL UNIQUE,
+	"TYPE"	INTEGER NOT NULL,
+	"NAME"	TEXT NOT NULL,
+	"PWDHASH"	TEXT NOT NULL,
+	PRIMARY KEY("UID" AUTOINCREMENT)
+);
+CREATE TABLE IF NOT EXISTS "Cards" (
+	"CID"	INTEGER NOT NULL UNIQUE,
+	"Bind_User"	INTEGER,
+	"Balance"	INTEGER NOT NULL DEFAULT 0,
+	"Frozen"	INTEGER NOT NULL DEFAULT 0,
+	PRIMARY KEY("CID" AUTOINCREMENT)
+);
+CREATE TABLE IF NOT EXISTS "transmit_logs" (
+	"ID"	INTEGER NOT NULL UNIQUE,
+	"TYPE"	INTEGER NOT NULL DEFAULT 0,
+	"STATUS"	INTEGER NOT NULL DEFAULT 0,
+	"Remark"	TEXT,
+	PRIMARY KEY("ID" AUTOINCREMENT)
+);
+CREATE TABLE IF NOT EXISTS "Order_logs" (
+	"ID"	INTEGER NOT NULL UNIQUE,
+	"TID"	INTEGER,
+	"Valid"	INTEGER NOT NULL DEFAULT 0,
+	"Shipment_Status"	INTEGER NOT NULL DEFAULT 0,
+	"Order_INFO"	TEXT,
+	PRIMARY KEY("ID" AUTOINCREMENT)
+);
+COMMIT;
+```
+
+### 使用Python調用sqlite3
+
+#### 載入資料庫
+
+如果目標路徑沒有檔案，會建立一個新的.DB檔案
+
+```python
+import sqlite3 as db
+conn = db.connect(env['SQL']['sqlite_URL'])
+print(f"load database from {env['SQL']['sqlite_URL']} successfully")
+```
+
+#### 初始化資料庫(執行SQL檔案)
+
+讀取SQL檔案並執行
+
+```python
+def exec_sqlfile(conn, fp):
+    try:
+        with open(fp, 'r') as sql_file:
+            sql_script = sql_file.read()
+        cursor = conn.cursor()
+        cursor.executescript(sql_script)
+        conn.commit()
+        conn.close()
+        print("Execte Script successfully")
+        return True
+    except Exception as err:
+        print(err)
+        return False
+
+exec_sqlfile(conn=conn, fp="./data/sql/init.sql")
+```
+
+#### 新增一個測試帳號(插入資料至指定Table)
+
+sqlite3的佔位符是**?**
+
+格式為cursor.execute(str of sqlscript, (變數))，可以[參考](https://docs.python.org/zh-tw/3/library/sqlite3.html#using-sqlite3-efficiently)
+
+```python
+def INS_user(conn, user):
+    try:
+        sql = f"INSERT INTO Users (TYPE, NAME, PWDHASH) VALUES (?, ?, ?)"
+        cursor = conn.cursor()
+        cursor.execute(sql, (user.type, user.name, user.pwdhash),)
+        uid = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        print(f"Execte INSERTR user successfully:{uid}")
+        return uid
+    except Exception as err:
+        print(err)
+        return -1
+```
+
+#### 查詢User資料(SELECT from Table)
+
+藉由UID查詢User Table中的紀錄
+
+```python
+def quy_user(conn, uid):
+  sql = f"SELECT * FROM Users WHERE UID = {uid}"
+  print(sql)
+  for row in conn.execute(sql):
+      print(row)
+```
+
+這邊寫的比較急，剛烤肉回來月半中，後續可能會再慢慢追加forign key與其他資料庫設計，先這樣能用就好
