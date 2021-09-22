@@ -4,12 +4,17 @@ from configparser import ConfigParser
 from sqlite3.dbapi2 import Cursor
 from types import SimpleNamespace
 
+def quy_dbonline(conn:db.connect):
+    sql = "SELECT 1 FROM Users"
+    r = conn.execute(sql)
+    return r.fetchone()[0] == 1
+
 def quy_user(conn, uid):
     sql = f"SELECT * FROM Users WHERE UID = {uid}"
-    print(sql)
-    for row in conn.execute(sql):
-        print(row)
-    
+    # print(sql)
+    rr =  conn.execute(sql)
+    # print(rr.fetchall())
+    return rr.fetchone()
 
 def INS_user(conn, user):
     try:
@@ -51,5 +56,6 @@ if __name__ == '__main__':
         # INS_user(conn=conn, user=user)
 
         quy_user(conn, 7)
+        quy_dbonline(conn)
     except Exception as err:
         print(err)

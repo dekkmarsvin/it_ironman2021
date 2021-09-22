@@ -37,6 +37,7 @@
       - [初始化資料庫(執行SQL檔案)](#初始化資料庫執行sql檔案)
       - [新增一個測試帳號(插入資料至指定Table)](#新增一個測試帳號插入資料至指定table)
       - [查詢User資料(SELECT from Table)](#查詢user資料select-from-table)
+  - [[day10] Flask Python API Service](#day10-flask-python-api-service)
 
 ## [Day1] 金融支付API
 
@@ -805,3 +806,5 @@ def quy_user(conn, uid):
 ```
 
 這邊寫的比較急，剛烤肉回來月半中，後續可能會再慢慢追加forign key與其他資料庫設計，先這樣能用就好
+
+## [day10] Flask Python API Service
