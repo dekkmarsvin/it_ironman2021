@@ -39,6 +39,7 @@
       - [查詢User資料(SELECT from Table)](#查詢user資料select-from-table)
   - [[day10] Flask Python API Service](#day10-flask-python-api-service)
     - [設定測試API](#設定測試api)
+  - [day[11] Line Bot 產生Jwt](#day11-line-bot-產生jwt)
 
 ## [Day1] 金融支付API
 
@@ -849,3 +850,13 @@ if __name__ == '__main__':
 ```
 
 後續將以Server.py作為整個專案的中控主程式，對接API
+
+## day[11] Line Bot 產生Jwt
+
+安裝需求套件
+
+```bash
+pip install line-bot-sdk
+pip install pyjwt
+pip install cryptography
+```
