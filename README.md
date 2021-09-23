@@ -40,6 +40,10 @@
   - [[day10] Flask Python API Service](#day10-flask-python-api-service)
     - [設定測試API](#設定測試api)
   - [day[11] Line Bot 產生Jwt](#day11-line-bot-產生jwt)
+    - [產生 Assertion Signing Key(KID)](#產生-assertion-signing-keykid)
+    - [實作取得JWT](#實作取得jwt)
+    - [實作取得channel_access_token](#實作取得channel_access_token)
+    - [Hello Line，發送訊息](#hello-line發送訊息)
 
 ## [Day1] 金融支付API
 
@@ -853,10 +857,152 @@ if __name__ == '__main__':
 
 ## day[11] Line Bot 產生Jwt
 
-安裝需求套件
+本次鐵人賽將通過Line機器人搭建專案，所以沒有[Line Developers](https://developers.line.biz/en/)的快去申請吧，會用到的是[Messaging API](https://developers.line.biz/console/channel/new?type=messaging-api)在註冊完成後請安裝需求套件
 
 ```bash
 pip install line-bot-sdk
 pip install pyjwt
+pip install jwcrypto
 pip install cryptography
 ```
+
+### 產生 Assertion Signing Key(KID)
+
+本次專案以[channel access tokens v2.1](https://developers.line.biz/en/docs/messaging-api/generate-json-web-token/)版本進行實作，依照要求，需要[產生Assertion Signing Key](https://developers.line.biz/en/docs/messaging-api/generate-json-web-token/#create-an-assertion-signing-key)
+
+按照官網文件說明，因為只需要進行一次，可以透過瀏覽器開發工具快速的產生，或者使用Python也可以，這邊使用Google瀏覽器，按下F12開啟開發者工具，選擇Console頁籤，將以下程式碼貼上，即會產生private key與public key
+
+```javascript
+(async () => {
+  const pair = await crypto.subtle.generateKey(
+    {
+      name: 'RSASSA-PKCS1-v1_5',
+      modulusLength: 2048,
+      publicExponent: new Uint8Array([1, 0, 1]),
+      hash: 'SHA-256'
+    },
+    true,
+    ['sign', 'verify']
+  );
+   
+  console.log('=== private key ===');
+  console.log(JSON.stringify(await crypto.subtle.exportKey('jwk', pair.privateKey), null, '  '));
+   
+  console.log('=== public key ===');
+  console.log(JSON.stringify(await crypto.subtle.exportKey('jwk', pair.publicKey), null, '  ')); 
+})();
+```
+
+將產生的**public key**貼到[Line Developers Console](https://developers.line.biz/console/)創建的channels中的Assertion Signing Key欄位，如果看到右側有一串字串出現代表成功了，這就是KID，存起來等等會用到
+
+### 實作取得JWT
+
+Line使用[JWT](https://jwt.io/#libraries-io)，並以此簽名Token，詳細加密原理請參照網站
+
+此處產生Token的方式需要準備以下參數:
+
+Property|說明
+---|---
+kid|將Public Key填入網站後右側的字串
+iss|Channel ID
+sub|Channel ID
+aud|<https://api.line.me/>
+exp|JWT的有效期限
+token_exp|以本JWT簽名的Token的有效期限
+
+以Python實作:
+
+```python
+import jwt
+from jwt.algorithms import RSAAlgorithm
+import time
+
+privateKey = {
+  "alg": "RS256",
+  "d": "dcA-LXLBRecBQbW7a8LKAriFJhnpXzwu2uNoVF_8-QmGVzI5682FWh_CWhl_B6J0fpmA-d7_EP0WCB3AGhxlyTP6ROoYJo7nygb_KMLREM7n64LFGbvNtw4jk7dmISXl_JuEX6CG09BBx4GLh9AGHSaK4v9B-dDvrNZlAo2mIjISHNcAPENbOl_XIOmZpJd56znjjc1gGKaYGbIm8unxHnPhL66IVYGRu8gxKfG6JUP7o370-VDfFOeaAR0HshTycP6M41jcDSjL6z9-J-Sh0zSZXqGS4u82TNtmwtRTzVwd0w30KQ0TTROTiNsz5apVHjpMvmAxRlbvcW41xIq8sQ",
+  "dp": "PAWBMzwnwgc-yixarV30gemH6Wk15HfSUYpR4wJZUHemGx_LE5GXdnKoyy8G9DAl6XMpm7YVH8cPXgXYNh-JlAggvzUeH5A7KAV4ZPTNak4CI844GSbYIu_dPBcVAg0O6sxQWugYpPbPnMDpE7qf4KilSSVG3JKqEMxkYySjZZE",
+  "dq": "LBA_q2YYnglCL41-1b3BmzCm-hs7Q-N__otDWO01I03VYnzU-vEQmxy6Fzrh2Y4Fgwp6D8iScu42AOyhE-T-qDNbAsCB0iZeFqm84g6VQAfDbknjIUZtcGvQgzy-zlrl253_QdyJvl2b44KT1hfoF0tDNA1rhOy7WlBM__rH0Pc",
+  "e": "AQAB",
+  "kty": "RSA",
+  "n": "x2glWJ7baQV4vdElnAXA5yu8yFk4LpszkHW3Ey-BKGT3kGVLy3Jk3OvkwjBFOglXWeyTWe_rJkMYkBKuon5syZVjrjb24CmViAXGr6d6IvrYWj8IGZ6ElVABfnjGgZMVywmBb7hIh2p8QR0L8UJEuWjBU5nlwkMBpvnY2HXAVhvir8CN7WRj_GBMxxgg7wSuW1tV-7Qf44grMqJ0Je7zjflS4-TpI8Ox3nhamn0d7NIdQ3jNdTP7IZF61IvETgb_6NdFnfsN-aifJC-Ea3ZwhVcEGJ5z3MMoKSoChJmkJMiV9CldqGRnEDWwBugZHeEtn71eGVE3DAXAzrf525YHYQ",
+  "p": "7eH8LAzNkITH6t7CWU5tPAmQlGQPkby66Yfq52tSZ43pQRz0CdtDYCQnGoBXvHzAHhzH4MjmNLOSGVimZK_dIRg5lJaPvVe6hgQ3pYud5WzPWsnQTsC7agQ2rfQglyFUtjwd1gWBIY4gwHj4BYG6Up3g0TlX1sf_juZxcLhkOsc",
+  "q": "1pf-Pj2ZPL1nGqVcMVH_hfziIOBtjxc5vMGyHwTaLAA9y2xKfe_SRU8kUK2q5ZykJ8wMckR9Pduuyn-vp4q2FANVSN69G01pUKM2ppkgXuil2S3REmzniGdajZjkpWKaZ6z1tJ_xSv9ghx06Dbro8n___KnpBq6afb022anRxJc",
+  "qi": "6L6SgH_pkyqq1Tb6QXPAGmtqVZT58Ljf3QTw6Tx5OdZ9NNvDReHHb64MgbUMLhLzGMeXGqDI5j0WLhtXv4ddCKWkF7OeKLUNuRP7yLpyYMazn8TEOjKHsgLAklenxcSgYaoO_wULh1mze1_ZO2PJNgvkIx_Xzr0XDUAqUp4W0jk",
+  "use": "sig"
+}
+
+headers = {
+    "alg": "RS256",
+    "typ": "JWT",
+    "kid": "9869e446-3489-4516-a83f-ec9214ad94d0"
+}
+
+payload = {
+  "iss": "1234567890",
+  "sub": "1234567890",
+  "aud": "https://api.line.me/",
+  "exp":int(time.time())+(60 * 30),
+  "token_exp": 60 * 60 * 24 * 30
+}
+
+key = RSAAlgorithm.from_jwk(privateKey)
+
+JWT = jwt.encode(payload, key, algorithm="RS256", headers=headers, json_encoder=None)
+print(JWT)
+```
+
+### 實作取得channel_access_token
+
+在這邊，要向Line官方取得token，在產生JWT後，需要在JWT的有效期限內進行token的產生，詳細的錯誤說明與欄位解釋可以參照[官方文件](https://developers.line.biz/en/reference/messaging-api/#issue-channel-access-token-v2-1)，會使用到的參數如下:
+
+Property|說明
+---|---
+JWT|JWT，JSON格式
+
+以Python實作:
+
+```python
+def Issue_channel_access_token(JWT):
+  #https://developers.line.biz/en/reference/messaging-api/#issue-channel-access-token-v2-1
+  url = "https://api.line.me/oauth2/v2.1/token"
+  headers = APIPm.xwwwformurlencodedheaders
+  data = {
+      "grant_type":"client_credentials",
+      "client_assertion_type":"urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+      "client_assertion": JWT
+  }
+  resp = APIPm.sendreq(url=url, headers=headers, data=data)
+  # resp = json.loads(resp.text)
+  return jsonresphandler(resp)
+```
+
+### Hello Line，發送訊息
+
+有了Token，就可以進行API的使用了，這邊先跳到Line Developers，請在自己的機器人的Basic setting中最下方找到**Your user ID**存起來備用，要發訊息囉
+
+以Python實作:
+
+```python
+def Send_push_message(token, IDs):
+  access_token = token['access_token']
+  url = "https://api.line.me/v2/bot/message/push"
+  headers = APIPm.jsonheaders.copy()
+  headers['Authorization'] = f"Bearer {access_token}"
+  data = {
+      "to": IDs,
+      "messages":[
+          {
+              "type":"text",
+              "text":"Hello, world"
+          },
+          {
+              "type":"text",
+              "text":"Hello, ITironman"
+          }
+      ]
+  }
+  resp = APIPm.sendreq(url=url, headers=headers, data=json.dumps(data, indent=4))
+  return jsonresphandler(resp)
+```
+
+現在應該可以在手機上找到發給自己的訊息了，明天開始把接收功能做出來
