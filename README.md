@@ -39,7 +39,7 @@
       - [查詢User資料(SELECT from Table)](#查詢user資料select-from-table)
   - [[day10] Flask Python API Service](#day10-flask-python-api-service)
     - [設定測試API](#設定測試api)
-  - [day[11] Line Bot 產生Jwt](#day11-line-bot-產生jwt)
+  - [day[11] Hello Line - 第一個Line訊息](#day11-hello-line---第一個line訊息)
     - [產生 Assertion Signing Key(KID)](#產生-assertion-signing-keykid)
     - [實作取得JWT](#實作取得jwt)
     - [實作取得channel_access_token](#實作取得channel_access_token)
@@ -855,7 +855,7 @@ if __name__ == '__main__':
 
 後續將以Server.py作為整個專案的中控主程式，對接API
 
-## day[11] Line Bot 產生Jwt
+## day[11] Hello Line - 第一個Line訊息
 
 本次鐵人賽將通過Line機器人搭建專案，所以沒有[Line Developers](https://developers.line.biz/en/)的快去申請吧，會用到的是[Messaging API](https://developers.line.biz/console/channel/new?type=messaging-api)在註冊完成後請安裝需求套件
 
