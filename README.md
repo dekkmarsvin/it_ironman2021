@@ -44,7 +44,10 @@
     - [實作取得JWT](#實作取得jwt)
     - [實作取得channel_access_token](#實作取得channel_access_token)
     - [Hello Line，發送訊息](#hello-line發送訊息)
-  - [Hello Line - 接收Log訊息](#hello-line---接收log訊息)
+  - [[day12]Heroku 基本使用](#day12heroku-基本使用)
+    - [套件安裝](#套件安裝)
+    - [下載並啟用範例專案](#下載並啟用範例專案)
+    - [建立第一個Heroku App](#建立第一個heroku-app)
 
 ## [Day1] 金融支付API
 
@@ -1008,4 +1011,39 @@ def Send_push_message(token, IDs):
 
 現在應該可以在手機上找到發給自己的訊息了，明天開始把接收功能做出來
 
-## Hello Line - 接收Log訊息
+## [day12]Heroku 基本使用
+
+如果你有自己的固定IP，可以在本機進行部署，或著使用免費版本的[Heroku Platform](https://devcenter.heroku.com/)在雲端建立你的伺服器，方法沒有一定，今天進行Python版本的建置流程
+
+### 套件安裝
+
+在[這邊](https://signup.heroku.com/signup/dc)建立你的Heroku Free Account
+
+安裝[Heroku CLI](https://devcenter.heroku.com/articles/heroku-cli)
+
+### 下載並啟用範例專案
+
+```cmd
+git clone https://github.com/heroku/python-getting-started.git
+cd python-getting-started
+```
+
+如果你因為設定錯了參數，想要重新使用已經創建的App，可以使用以下指令設定遠端專案
+
+```git
+heroku git:remote -a [the-app-name]
+```
+
+### 建立第一個Heroku App
+
+建立一個新App，並將當前的專案推送至Heroku
+
+```sh
+heroku create
+git push heroku main
+```
+
+建置完成的App，在**未啟用**前處於壓縮的狀態(slug)，
+
+今天簡單的過一遍基礎的Heroku使用方式，明天進入將Line機器人部署的教學
+
