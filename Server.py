@@ -48,6 +48,7 @@ def handle_message(event):
 
 @app.route("/dbstatus", methods=['GET'])
 def HelloWorld():
+    conn = db.connect(os.environ['sqlite_URL'], check_same_thread=False)
     if(dbcc.quy_dbonline(conn)):
         return "Database ONLINE"
     else:
