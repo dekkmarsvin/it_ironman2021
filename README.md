@@ -44,6 +44,7 @@
     - [實作取得JWT](#實作取得jwt)
     - [實作取得channel_access_token](#實作取得channel_access_token)
     - [Hello Line，發送訊息](#hello-line發送訊息)
+  - [Hello Line - 接收Log訊息](#hello-line---接收log訊息)
 
 ## [Day1] 金融支付API
 
@@ -1006,3 +1007,5 @@ def Send_push_message(token, IDs):
 ```
 
 現在應該可以在手機上找到發給自己的訊息了，明天開始把接收功能做出來
+
+## Hello Line - 接收Log訊息
