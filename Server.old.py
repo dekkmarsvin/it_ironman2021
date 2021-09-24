@@ -1,5 +1,6 @@
 from flask import Flask, request, abort
 from flask_restful import Api, utils
+from configparser import ConfigParser
 import sqlite3 as db
 from types import SimpleNamespace
 from linebot import (
@@ -11,15 +12,17 @@ from linebot.exceptions import (
 from linebot.models import (
     MessageEvent, TextMessage, TextSendMessage,
 )
-import os
 
 import util.dbcc as dbcc
+
+env = ConfigParser()
+env.read('env.ini')
 
 app = Flask(__name__)
 api = Api(app)
 
-line_bot_api = LineBotApi(os.environ['LCAT'])
-handler = WebhookHandler(os.environ['Cst'])
+line_bot_api = LineBotApi(env['Line']['LCAT'])
+handler = WebhookHandler(env['Line']['Cst'])
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -55,8 +58,8 @@ def HelloWorld():
 
 if __name__ == '__main__':
     try:
-        conn = db.connect(os.environ['sqlite_URL'], check_same_thread=False)
-        print(f"load database from {os.environ['sqlite_URL']} successfully")
+        conn = db.connect(env['SQL']['sqlite_URL'], check_same_thread=False)
+        print(f"load database from {env['SQL']['sqlite_URL']} successfully")
         app.run(debug=True)
     except Exception as err:
         print(err)
