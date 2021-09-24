@@ -48,6 +48,12 @@
     - [套件安裝](#套件安裝)
     - [下載並啟用範例專案](#下載並啟用範例專案)
     - [建立第一個Heroku App](#建立第一個heroku-app)
+    - [Procfile](#procfile)
+    - [requirements環境套件](#requirements環境套件)
+    - [本機運行測試](#本機運行測試)
+    - [將修改完成的新版本上傳到雲端](#將修改完成的新版本上傳到雲端)
+    - [設定環境變數](#設定環境變數)
+    - [其他功能](#其他功能)
 
 ## [Day1] 金融支付API
 
@@ -1043,7 +1049,118 @@ heroku create
 git push heroku main
 ```
 
-建置完成的App，在**未啟用**前處於壓縮的狀態(slug)，
+建置完成的App，在**未啟用**前處於壓縮的狀態(slug)，將其部屬到節點([dynos](https://devcenter.heroku.com/articles/dynos))，才能啟用App，使用以下指令分配一個dynos給App:
+
+```sh
+heroku ps:scale web=1
+```
+
+完成資源分配後，你的App就能夠使用分配到的資源開始運作，使用以下指令測試App:
+
+```sh
+heroku open
+```
+
+檢視Log:
+
+```sh
+heroku logs --tail
+```
+
+### Procfile
+
+[Procfile](https://devcenter.heroku.com/articles/procfile)，是App的啟動指令，格式為
+
+```python
+<process type>: <command>
+# 測試App中的Procfile為
+web: gunicorn gettingstarted.wsgi
+```
+
+只有web類型的程序能夠進行HTTP傳輸，其他類型的則無法從Heroku的Router上接收傳送資料
+
+### requirements環境套件
+
+如果專案根目錄存在requirements.txt，Heroku將會判斷專案為Python語言，同時在部署時Heroku會讀取內部的內容安裝指定的套件
+
+如果你沒有虛擬環境，或虛擬環境有太多不相干的套件，可以使用pipreqs產生專案的requirements.txt
+
+```sh
+pip install pipreqs
+pipreqs /path/to/project
+```
+
+### 本機運行測試
+
+在部署上去之前，可以在個人電腦進行模擬測試，以避免上船上去後發生編譯錯誤或其他問題，由於是本機運作，如果系統為Windows需要設定專用的Procfile:
+
+```Procfile
+# Procfile.windows
+python manage.py collectstatic
+
+#以此指令在Windows上啟動本機模式
+heroku local web -f Procfile.windows
+
+#以此指令在Unix系統上執行本機模式
+heroku local web
+```
+
+使用瀏覽器打開<http://localhost:5000>，如果正常，應該可以看到App產生的網頁
+
+### 將修改完成的新版本上傳到雲端
+
+Heroku使用與Git同樣的格式進行版本控管，以下為範例
+
+修改requirements.txt，新增reequests套件使用
+
+在hello/views.py加入import requests，並修改index函式為:
+
+```python
+def index(request):
+    r = requests.get('http://httpbin.org/status/418')
+    print(r.text)
+    return HttpResponse('<pre>' + r.text + '</pre>')
+```
+
+完成本機測試後，與Git相同
+
+```sh
+git add . 
+git commit -m "new Index"
+```
+
+部署
+
+```sh
+git push heroku main
+```
+
+開啟
+
+```sh
+heroku open
+```
+
+### 設定環境變數
+
+Heroku鼓勵使用[config vars](https://devcenter.heroku.com/articles/config-vars)作為變數的儲存方式，可以通過網頁的控制台頁籤中的Setting-Config Vars進行設定，或使用CLI
+
+```sh
+#顯示專案環境變數
+heroku config
+
+#取得特定的變數值
+heroku config:get [Key]
+
+#設定環境變數
+heroku config:set [Key]=[Val]
+
+#移除環境變數
+heroku config:unset [Key]
+```
+
+### 其他功能
+
+[插件](https://devcenter.heroku.com/articles/what-is-an-add-on)、[執行命令、開啟Bash](https://devcenter.heroku.com/articles/one-off-dynos)
 
 今天簡單的過一遍基礎的Heroku使用方式，明天進入將Line機器人部署的教學
-
