@@ -54,7 +54,13 @@
     - [將修改完成的新版本上傳到雲端](#將修改完成的新版本上傳到雲端)
     - [設定環境變數](#設定環境變數)
     - [其他功能](#其他功能)
-  - [[day13] 接收使用者的Line訊息](#day13-接收使用者的line訊息)
+  - [[day13] 設定gunicorn Logging](#day13-設定gunicorn-logging)
+    - [gunicorn log 使用方式](#gunicorn-log-使用方式)
+    - [使用Heroku 模組以從網頁瀏覽logs](#使用heroku-模組以從網頁瀏覽logs)
+  - [[day14] 接收使用者的Line訊息](#day14-接收使用者的line訊息)
+    - [實作並部署回聲機器人](#實作並部署回聲機器人)
+      - [加機器人為好友](#加機器人為好友)
+    - [過程解析](#過程解析)
 
 ## [Day1] 金融支付API
 
@@ -1166,4 +1172,234 @@ heroku config:unset [Key]
 
 今天簡單的過一遍基礎的Heroku使用方式，明天進入將Line機器人部署的教學
 
-## [day13] 接收使用者的Line訊息
+## [day13] 設定gunicorn Logging
+
+使用gunicorn作為HTTP Server的時候，必須手動指派gunicorn的logger作為flask的logger handler，才能夠正常的進行DEBUG、WARN、INFO、WARN、CRIT等的log紀錄
+
+在Server.py內加入如下程式碼，以將gunicorn的logger與flask App結合
+
+```python
+if __name__ != '__main__':
+    gunicorn_logger = logging.getLogger('gunicorn.error')
+    app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel(gunicorn_logger.level)
+```
+
+### gunicorn log 使用方式
+
+指定logging以debug模式運作，修改Procfile內指令為:
+
+```Procfile
+web: gunicorn --log-level=debug Server:app
+```
+
+logger的使用方式:
+
+```python
+# app.logger.[LEVEL]([LOG_MESSAGE])
+app.logger.debug('this is a DEBUG message')
+app.logger.info('this is an INFO message')
+app.logger.warning('this is a WARNING message')
+app.logger.error('this is an ERROR message')
+app.logger.critical('this is a CRITICAL message')
+```
+
+在Server.py內加入一個新的route以測試log效果
+
+```python
+@app.route('/')
+def default_route():
+    """Default route"""
+    app.logger.debug('this is a DEBUG message')
+    app.logger.info('this is an INFO message')
+    app.logger.warning('this is a WARNING message')
+    app.logger.error('this is an ERROR message')
+    app.logger.critical('this is a CRITICAL message')
+    return jsonify('that's a log of logs')
+```
+
+完成所有修改後將修改部署到heroku，測試功能吧
+
+```sh
+git add .
+git commit -m "logging"
+git push heroku main
+heroku open
+herolu logs -t
+```
+
+使用herolu logs 查詢logs，你應該可以看到如下輸出
+
+```log
+2021-09-25T09:19:39.406667+00:00 app[web.1]: [2021-09-25 09:19:39 +0000] [7] [DEBUG] this is a DEBUG message
+2021-09-25T09:19:39.406742+00:00 app[web.1]: [2021-09-25 09:19:39 +0000] [7] [INFO] this is an INFO message
+2021-09-25T09:19:39.406816+00:00 app[web.1]: [2021-09-25 09:19:39 +0000] [7] [WARNING] this is a WARNING message
+2021-09-25T09:19:39.406877+00:00 app[web.1]: [2021-09-25 09:19:39 +0000] [7] [ERROR] this is an ERROR message
+2021-09-25T09:19:39.406935+00:00 app[web.1]: [2021-09-25 09:19:39 +0000] [7] [CRITICAL] this is a CRITICAL message
+```
+
+### 使用Heroku 模組以從網頁瀏覽logs
+
+你可以通過[Papertrail](https://devcenter.heroku.com/articles/papertrail)進行App的狀態監測與查看logs，可以省去自行撰寫logs分類，與命令列方式查閱不易的問題，並提供各種如錯誤通知的功能
+
+```sh
+heroku addons:create papertrail
+heroku addons:open papertrail
+```
+
+你可以通過如上addons:open指令開啟模組的網頁，或是直接以如下方式從瀏覽器直接進入，將<app name\>替換為你的heroku App名稱
+
+```sh
+https://addons-sso.heroku.com/apps/<app name>/addons/papertrail
+```
+
+今天補一點昨天沒有忘了補充的部分
+
+## [day14] 接收使用者的Line訊息
+
+結合先前的
+
+1. 產生[channel access token](https://ithelp.ithome.com.tw/articles/10270875)
+2. 設定[heroku](https://ithelp.ithome.com.tw/articles/10271516)
+
+可以開始建立一個伺服器接收由Line官方送過來的資訊，此處假設你使用Heroku進行開發，在[Line Developers Console](https://developers.line.biz/console/)內，將Channel-->Messaging API-->Webhook URL設定為
+
+https://[AppName].herokuapp.com/callback
+
+並將Auto-reply messages 與 Greeting messages同樣設為Disabled，方法為:
+
+1. 點選右側的Edit
+2. Line Offficial Account Manager-->回應設定
+3. 停用加入好友的歡迎訊息與自動回應訊息
+
+### 實作並部署回聲機器人
+
+此機器人功能:回傳傳給機器人的文字訊息
+
+如果未安裝line-bot-sdk套件
+
+```sh
+pip install line-bot-sdk
+```
+
+修改Server.py，加入以下內容
+
+```python
+from flask import Flask, request, abort
+
+from linebot import (
+    LineBotApi, WebhookHandler
+)
+from linebot.exceptions import (
+    InvalidSignatureError
+)
+from linebot.models import (
+    MessageEvent, TextMessage, TextSendMessage,
+)
+import os
+
+app = Flask(__name__)
+api = Api(app)
+
+#LCAT為Channel Access Token
+line_bot_api = LineBotApi(os.environ['LCAT'])
+
+#Cst為Channel secret
+handler = WebhookHandler(os.environ['Cst'])
+
+@app.route("/callback", methods=['POST'])
+def callback():
+    # get X-Line-Signature header value
+    signature = request.headers['X-Line-Signature']
+
+    # get request body as text
+    body = request.get_data(as_text=True)
+    app.logger.info("Request body: " + body)
+
+    # handle webhook body
+    try:
+        handler.handle(body, signature)
+    except InvalidSignatureError:
+        print("Invalid signature. Please check your channel access token/channel secret.")
+        abort(400)
+
+    return 'OK'
+
+@handler.add(MessageEvent, message=TextMessage)
+def handle_message(event):
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text=event.message.text))
+```
+
+部署:
+
+```sh
+git add .
+git commit -m "Echo Bot"
+git push heroku main
+```
+
+此時從Line傳訊息給機器人，你應該就可以收得到來自機器人的回訊
+
+![line echo reply bot](readme/LINE-capture-654281712.289593.jpg)
+
+#### 加機器人為好友
+
+Line Developers --> Channel Setting --> Messaging API --> Bot information --> Bot basic ID or QR code
+
+使用你的手機搜尋Bot basic ID或掃描QR code加機器人為好友
+
+### 過程解析
+
+這是一個由Line官方傳送過來的Webhook Sample
+
+```json
+{
+  "destination": "xxxxxxxxxx",
+  "events": [
+      {
+          "type": "message",
+          "message": {
+              "type": "text",
+              "id": "14353798921116",
+              "text": "Hello, world"
+          },
+          "timestamp": 1625665242211,
+          "source": {
+              "type": "user",
+              "userId": "U80696558e1aa831..."
+          },
+          "replyToken": "757913772c4646b784d4b7ce46d12671",
+          "mode": "active"
+      },
+      {
+          "type": "follow",
+          "timestamp": 1625665242214,
+          "source": {
+              "type": "user",
+              "userId": "Ufc729a925b3abef..."
+          },
+          "replyToken": "bb173f4d9cf64aed9d408ab4e36339ad",
+          "mode": "active"
+      },
+      {
+          "type": "unfollow",
+          "timestamp": 1625665242215,
+          "source": {
+              "type": "user",
+              "userId": "Ubbd4f124aee5113..."
+          },
+          "mode": "active"
+      }
+  ]
+}
+```
+
+1. 手機發訊息給Line
+2. Line傳送通知給bot server(webhook URL)的[webhook]((https://developers.line.biz/en/reference/messaging-api/#webhooks)
+3. WebhookHandler驗證headers中的**x-line-signature**欄位簽章，除了使用SDK進行驗證，也可以[手動進行驗證](https://developers.line.biz/en/reference/messaging-api/#signature-validation)
+4. 將資料傳送給配對的執行函數，如本次範例中使用的MessageEvent與TextMessage，進行處理
+5. 使用Line SDK回覆訊息，回傳TextSendMessage(text=event.message.text)) 以此範例還說，就是Hello, world
+
+跑完接收與發送，之後要開始把功能逐漸拼起來組成專案了
