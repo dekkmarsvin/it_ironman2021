@@ -61,6 +61,12 @@
     - [實作並部署回聲機器人](#實作並部署回聲機器人)
       - [加機器人為好友](#加機器人為好友)
     - [過程解析](#過程解析)
+  - [[day15]幾個常用的LineAPI](#day15幾個常用的lineapi)
+    - [取得機器人資訊](#取得機器人資訊)
+    - [推送、回覆訊息](#推送回覆訊息)
+    - [取得使用者資訊](#取得使用者資訊)
+    - [取得使用者訊息中的非文字內容](#取得使用者訊息中的非文字內容)
+    - [Line-SDK的意外處理](#line-sdk的意外處理)
 
 ## [Day1] 金融支付API
 
@@ -1403,3 +1409,90 @@ Line Developers --> Channel Setting --> Messaging API --> Bot information --> Bo
 5. 使用Line SDK回覆訊息，回傳TextSendMessage(text=event.message.text)) 以此範例還說，就是Hello, world
 
 跑完接收與發送，之後要開始把功能逐漸拼起來組成專案了
+
+## [day15]幾個常用的LineAPI
+
+今天Heroku[大當機](https://status.heroku.com/incidents/2362)0rz，寫一點Line API的使用教學
+
+LineSDK已經將大部分的實作功能與資料模型都包入了，這可以加快開發的速度:
+
+```python
+line_bot_api = LineBotApi('YOUR_CHANNEL_ACCESS_TOKEN')
+handler = WebhookHandler('YOUR_CHANNEL_SECRET')
+```
+
+### 取得機器人資訊
+
+```python
+bot_info = line_bot_api.get_bot_info()
+
+print(bot_info.display_name)
+print(bot_info.user_id)
+print(bot_info.basic_id)
+print(bot_info.premium_id)
+print(bot_info.picture_url)
+print(bot_info.chat_mode)
+print(bot_info.mark_as_read_mode)
+```
+
+### 推送、回覆訊息
+
+回覆訊息
+
+```python
+line_bot_api.reply_message('<reply_token>', TextSendMessage(text='Hello World!'))
+```
+
+推送訊息
+
+```python
+try:
+  line_bot_api.push_message('<to>', TextSendMessage(text='Hello World!'))
+except LineBotApiError as e:
+  # error handle
+```
+
+免費帳號有**單月500則**推送訊息的限制，回覆則不用錢
+
+### 取得使用者資訊
+
+在使用的時候，知道使用者的userid後，就能夠藉此取得使用者的顯示名稱(暱稱)、系統的使用語言、大頭貼、狀態消息，這可以提供一點使用者的資訊
+
+```python
+profile = line_bot_api.get_profile(user_id)
+
+print(profile.display_name)
+print(profile.user_id)
+print(profile.picture_url)
+print(profile.status_message)
+```
+
+這邊要注意一點，Line的JSON變數命名與Python不同，例如使用者ID，在Line送過來的Json body內以events.source.userID方式存放，但在Python，則為event.source.**user_id**，在資料變數命名上有許多的不同需要確認
+
+### 取得使用者訊息中的非文字內容
+
+如圖片、影片、音訊、檔案等
+
+```python
+message_content = line_bot_api.get_message_content(message_id)
+
+with open(file_path, 'wb') as fd:
+    for chunk in message_content.iter_content():
+        fd.write(chunk)
+```
+
+### Line-SDK的意外處理
+
+通常會是格式或參數錯誤，錯誤說明可以[參考](https://developers.line.biz/en/reference/messaging-api/#error-messages)
+
+```python
+try:
+    line_bot_api.push_message('to', TextSendMessage(text='Hello World!'))
+except linebot.exceptions.LineBotApiError as e:
+    print(e.status_code)
+    print(e.request_id)
+    print(e.error.message)
+    print(e.error.details)
+```
+
+今天主要在翻API文件，還有heroku在搞，明天會把對話紀錄生出來.....
