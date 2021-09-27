@@ -6,3 +6,4 @@ pycryptodome==3.10.1
 pycryptodomex==3.10.1
 PyJWT==2.1.0
 gunicorn
+psycopg2
