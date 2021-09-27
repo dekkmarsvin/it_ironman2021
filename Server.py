@@ -45,7 +45,7 @@ def callback():
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     app.logger.debug(f"event:{event}")
-    format_time = date.fromtimestamp(event.timestamp).strftime("%b %d %Y %H:%M:%S")
+    format_time = date.fromtimestamp(event.timestamp).strftime("%Y/%m/%d %H:%M:%S")
     app.logger.debug(f"message:{event.message.type}-{event.message.id} = {event.message.text}, from {event.source.type}:{event.source.userId} at {format_time}")
     line_bot_api.reply_message(
         event.reply_token,
