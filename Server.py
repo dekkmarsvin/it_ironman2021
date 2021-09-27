@@ -13,6 +13,7 @@ from linebot.models import (
     MessageEvent, TextMessage, TextSendMessage,
 )
 import os
+import psycopg2
 
 import util.dbcc as dbcc
 
@@ -58,11 +59,19 @@ def default_route():
 
 @app.route("/dbstatus", methods=['GET'])
 def HelloWorld():
-    conn = db.connect(os.environ['sqlite_URL'], check_same_thread=False)
-    if(dbcc.quy_dbonline(conn)):
-        return "Database ONLINE"
-    else:
-        return "Database OFFLINE"
+    # conn = db.connect(os.environ['sqlite_URL'], check_same_thread=False)
+    # if(dbcc.quy_dbonline(conn)):
+    #     return "Database ONLINE"
+    # else:
+    #     return "Database OFFLINE"
+    DATABASE_URL = os.environ['DATABASE_URL']
+    conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+    cur = conn.cursor()
+    cur.execute('SELECT VERSION()')
+    rr = cur.fetchall()
+    conn.commit()
+    cur.close()
+    return jsonify(f"Database version : {rr}")
 
 if __name__ != '__main__':
     gunicorn_logger = logging.getLogger('gunicorn.error')
