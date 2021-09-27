@@ -3,6 +3,7 @@ from flask_restful import Api, utils
 import sqlite3 as db
 from types import SimpleNamespace
 import logging
+from datetime import datetime
 from linebot import (
     LineBotApi, WebhookHandler
 )
@@ -44,6 +45,8 @@ def callback():
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     app.logger.debug(f"event:{event}")
+    format_time = datetime.fromtimestamp(event.timestamp).strftime("%b %d %Y %H:%M:%S")
+    app.logger.debug(f"message:{event.message.type}-{event.message.id} = {event.message.text}, from {event.source.type}:{event.source.userId} at {format_time}")
     line_bot_api.reply_message(
         event.reply_token,
         TextSendMessage(text=event.message.text))
