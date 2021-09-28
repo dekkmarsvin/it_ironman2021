@@ -16,7 +16,7 @@ class DBPm:
         cur = self.conn.cursor()
         cur.execute('SELECT VERSION()')
         rr = cur.fetchall()
-        logger.dbug(f"DBver:{rr}")
+        logger.debug(f"DBver:{rr}")
         self.conn.commit()
         cur.close()
         return jsonify(rr)
