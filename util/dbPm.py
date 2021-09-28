@@ -24,8 +24,6 @@ class DBPm:
         cur = self.conn.cursor()
         query = sql.SQL("INSERT INTO {}(id, type, text, datetime, source_uid, source_type) VALUES(%s, %s, %s, %s, %s, %s)").format(sql.Identifier('messaging_log'))
         cur.execute(query, (id, msgtype, text, dt, suid, stype))
-        r = cur.fetchall()
-        app.logger.debug(f"INS_msg_log_r:{r}")
+        app.logger.debug(f"INS_msg_log_r:{query}")
         self.conn.commit()
         cur.close()
-        return f"INS_msg_log:{r}"
