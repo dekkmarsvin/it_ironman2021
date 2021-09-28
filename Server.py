@@ -69,7 +69,7 @@ def default_route():
 def HelloWorld():
     r = dbpm.DBver()
     app.logger.debug(f"type:{type(r)}, {r}")
-    return r
+    return jsonify(f"Database Version: {r}")
 
 if __name__ != '__main__':
     gunicorn_logger = logging.getLogger('gunicorn.error')
