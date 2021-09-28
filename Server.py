@@ -51,7 +51,7 @@ def handle_message(event):
     dt = datetime.fromtimestamp(event.timestamp / 1000.0).astimezone(TWT)
     format_time = dt.strftime("%Y/%m/%d %H:%M:%S")
     app.logger.debug(f"message:{event.message.type}-{event.message.id} = {event.message.text}, from {event.source.type}:{prof.display_name}({event.source.user_id}) at {format_time}")
-    dbpm.INS_msg_log(event.message.id, event.message.type, event.message.text, dt, event.source.type, event.source.user_id)
+    dbpm.INS_msg_log(event.message.id, event.message.type, event.message.text, dt.isoformat(), event.source.type, event.source.user_id)
     line_bot_api.reply_message(
         event.reply_token,
         TextSendMessage(text=event.message.text))
