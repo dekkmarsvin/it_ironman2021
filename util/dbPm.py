@@ -17,7 +17,7 @@ class DBPm:
         app.logger.debug(f"DBver:{rr}")
         self.conn.commit()
         cur.close()
-        return jsonify(rr)
+        return rr
 
     def INS_msg_log(self, id, type, text, timestamp, stype, suid):
         cur = self.conn.cursor()
@@ -27,4 +27,4 @@ class DBPm:
         app.logger.debug(f"INS_msg_log_r:{r}")
         self.conn.commit()
         cur.close()
-        return jsonify(f"INS_msg_log:{r}")
+        return f"INS_msg_log:{r}"

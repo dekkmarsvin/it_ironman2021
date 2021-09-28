@@ -50,7 +50,7 @@ def handle_message(event):
     prof = line_bot_api.get_profile(event.source.user_id)
     format_time = datetime.fromtimestamp(event.timestamp / 1000.0).astimezone(TWT).strftime("%Y/%m/%d %H:%M:%S")
     app.logger.debug(f"message:{event.message.type}-{event.message.id} = {event.message.text}, from {event.source.type}:{prof.display_name}({event.source.user_id}) at {format_time}")
-    
+    dbpm.INS_msg_log(event.message.id, event.message.type, event.message.text, event.timestamp, event.source.type, event.source.user_id)
     line_bot_api.reply_message(
         event.reply_token,
         TextSendMessage(text=event.message.text))
@@ -67,18 +67,6 @@ def default_route():
 
 @app.route("/dbstatus", methods=['GET'])
 def HelloWorld():
-    # conn = db.connect(os.environ['sqlite_URL'], check_same_thread=False)
-    # if(dbcc.quy_dbonline(conn)):
-    #     return "Database ONLINE"
-    # else:
-    #     return "Database OFFLINE"
-    # DATABASE_URL = os.environ['DATABASE_URL']
-    # conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-    # cur = conn.cursor()
-    # cur.execute('SELECT VERSION()')
-    # rr = cur.fetchall()
-    # conn.commit()
-    # cur.close()
     r = dbpm.DBver()
     app.logger.debug(f"type:{type(r)}, {r}")
     return r
