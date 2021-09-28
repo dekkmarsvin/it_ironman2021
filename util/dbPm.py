@@ -1,5 +1,6 @@
 import os
 import psycopg2
+from psycopg2 import sql
 from requests.api import get
 from flask import current_app as app
 from flask import jsonify
@@ -21,7 +22,8 @@ class DBPm:
 
     def INS_msg_log(self, id, msgtype, text, timestamp, stype, suid):
         cur = self.conn.cursor()
-        cur.execute("INSERT INTO messaging_log (id, type, text, timestamp, source_uid, source_type VALUES(%s, %s, %s, %s, %s, %s)", (id, msgtype, text, timestamp, suid, stype))
+        query = sql.SQL("INSERT INTO {}(id, type, text, timestamp, source_uid, source_type) VALUES(%s, %s, %s, %s, %s, %s)").format(sql.Identifier('messaging_log'))
+        cur.execute(query, (id, msgtype, text, timestamp, suid, stype))
         r = cur.fetchall()
         app.logger.debug(f"INS_msg_log_r:{r}")
         self.conn.commit()
