@@ -68,8 +68,13 @@
     - [取得使用者訊息中的非文字內容](#取得使用者訊息中的非文字內容)
     - [Line-SDK的意外處理](#line-sdk的意外處理)
   - [[day16]機器人對話紀錄](#day16機器人對話紀錄)
-    - [建立Postgres資料庫表格](#建立postgres資料庫表格)
-    - [[day17]使用者名稱表格](#day17使用者名稱表格)
+    - [Postgres 初始化 & 連線](#postgres-初始化--連線)
+      - [新增Postgres模組到你的專案](#新增postgres模組到你的專案)
+      - [建立表格](#建立表格)
+      - [連線](#連線)
+    - [紀錄Line對話](#紀錄line對話)
+    - [Summary](#summary)
+  - [[day17]使用者名稱表格](#day17使用者名稱表格)
 
 ## [Day1] 金融支付API
 
@@ -1506,6 +1511,132 @@ except linebot.exceptions.LineBotApiError as e:
 
 這個《ㄧ》個漢堡的一，是注音符號的《ㄧ》，你永遠不知道使用者會用什麼方式打字，在互動式的設計下，你會需要保留原始的對話紀錄，以應對各種神祕的輸入法所造成的問題，這邊要依據先前創建的Line Bot進行資料紀錄
 
-### 建立Postgres資料庫表格
+### Postgres 初始化 & 連線
 
-### [day17]使用者名稱表格
+#### 新增Postgres模組到你的專案
+
+使用[免費方案hobby-dev](https://devcenter.heroku.com/articles/heroku-postgres-plans#hobby-tier)
+
+```sh
+heroku addons:create heroku-postgresql:hobby-dev
+```
+
+用heroku pg:info檢查Postgres資料庫狀態
+
+```sh
+Plan:                  Hobby-dev
+Status:                Available
+Connections:           5/20
+PG Version:            13.4
+Created:               2021-09-27 02:30 UTC
+Data Size:             8.1 MB/1.00 GB (In compliance)
+Tables:                1
+Rows:                  3/10000 (In compliance)
+Fork/Follow:           Unsupported
+Rollback:              Unsupported
+Continuous Protection: Off
+Add-on:                postgresql-dimensional-#####
+```
+
+#### 建立表格
+
+可以使用[pgAdmin 4](https://www.pgadmin.org/)進行這個步驟，在dashboard內的addons，可以找到Heroku Postgres，Settings，Database Credentials會有從本機連線到資料庫的所需資訊
+
+參數|填入Pgadmin欄位
+---|---
+Host|Connection -Host Name/Address
+Database|Connection - Maintance Database & Advanced - DB Restriction
+User|Connection - User
+Port|Connection - Port
+Password|Connection - Password
+
+```sql
+CREATE TABLE IF NOT EXISTS public.messaging_log
+(
+    id text COLLATE pg_catalog."default" NOT NULL,
+    type text COLLATE pg_catalog."default" NOT NULL,
+    text text COLLATE pg_catalog."default",
+    datetime timestamp with time zone NOT NULL,
+    source_uid text COLLATE pg_catalog."default" NOT NULL,
+    source_type text COLLATE pg_catalog."default" NOT NULL,
+    CONSTRAINT messaging_log2_pkey PRIMARY KEY (id)
+)
+
+TABLESPACE pg_default;
+```
+
+#### 連線
+
+如果你的App與Postgres在相同的專案下，在App內與資料庫連線時，你不需要特別設定資料庫連線的URL、使用者名稱、密碼等，在跨專案運作時請參考[官方文件](https://devcenter.heroku.com/articles/heroku-postgresql#sharing-heroku-postgres-between-applications)
+
+安裝連線Driver
+
+```sh
+pip install psycopg2-binary
+```
+
+安裝完Addons你的Vars變數內會自動追加DATABASE_URL
+
+```python
+DATABASE_URL = os.environ['DATABASE_URL']
+conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+```
+
+測試連線，看能否執行查詢資料庫版本指令
+
+```python
+cur = conn.cursor()
+cur.execute('SELECT VERSION()')
+rr = cur.fetchall()
+app.logger.debug(f"DBver:{rr}")
+# "Database Version: [('PostgreSQL 13.4 (Ubuntu 13.4-1.pgdg20.04+1) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 9.3.0-17ubuntu1~20.04) 9.3.0, 64-bit',)]"
+conn.commit()
+cur.close()
+```
+
+### 紀錄Line對話
+
+藉由解析[Webhook Event Objects](https://developers.line.biz/en/reference/messaging-api/#webhook-event-objects)可以從使用者的對話中取得如下資訊
+
+1. 訊息類型
+2. 訊息ID
+3. 訊息文字(如果是文字訊息)
+4. 訊息來源
+5. 訊息來源使用者ID
+6. 使用者的顯示名稱....
+7. 以millisecond計算的Timestamp
+
+```python
+prof = line_bot_api.get_profile(event.source.user_id)
+dt = datetime.fromtimestamp(event.timestamp / 1000.0).astimezone(TWT)
+format_time = dt.strftime("%Y/%m/%d %H:%M:%S")
+app.logger.debug(f"message:{event.message.type}-{event.message.id} = {event.message.text}, from {event.source.type}:{prof.display_name}({event.source.user_id}) at {format_time}")
+# [DEBUG] message:text-<訊息ID> = 王大明愛吃漢堡包, from user:<使用者的顯示名稱>(<訊息來源使用者ID>_ at 2021/09/28 17:53:00
+```
+
+將對應的參數填入Sql變數
+
+```python
+def INS_msg_log(self, id, msgtype, text, dt, stype, suid):
+  cur = self.conn.cursor()
+  query = sql.SQL("INSERT INTO {}(id, type, text, datetime, source_uid, source_type) VALUES(%s, %s, %s, %s, %s, %s)").format(sql.Identifier('messaging_log'))
+  cur.execute(query, (id, msgtype, text, dt, suid, stype))
+  self.conn.commit()
+  cur.close()
+
+dbpm.INS_msg_log(event.message.id, event.message.type, event.message.text, dt.isoformat(), event.source.type, event.source.user_id)
+```
+
+如果運作正常，你就可以在資料庫查詢到每一筆使用者的訊息
+
+訊息ID|訊息類型|訊息文字|時間(UTC)|UID|使用者類型
+---|---|---|---|---|---
+14999999999999|	text	|Apple |	2021-09-28 07:51:32.835+00|	Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx|	user|
+14999999999999|	text	|Banana |	2021-09-28 07:51:39.133+00|	Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx|	user|
+14999999999999|	text	|王大明愛吃漢堡包|	2021-09-28 09:53:00.274+00|	Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx|	user|
+
+### Summary
+
+你有沒有注意到，使用者名稱如果想儲存的話，是不是每一筆訊息都要查詢一次，這樣對話量一多會頻繁的向Line官方送出API請求，很容易造成被Ban，明天做一個UID與名稱對應表格吧
+
+## [day17]使用者名稱表格
