@@ -26,4 +26,4 @@ print("Local time   {}".format(utc_dt.astimezone(get_localzone()).isoformat()))
 print("Local time   {}".format(utc_dt.astimezone(NZST).isoformat()))
 
 ldt = datetime.fromtimestamp(1632791870594 / 1000.0)
-print("TWT time   {}".format(ldt.astimezone(TWT).isoformat()))
+print("TWT time     {}".format(ldt.astimezone(TWT).isoformat(timespec='auto')))
