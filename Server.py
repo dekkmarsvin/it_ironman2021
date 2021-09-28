@@ -81,7 +81,7 @@ def HelloWorld():
     # cur.close()
     r = dbpm.DBver()
     app.logger.debug(f"DBver:{r}")
-    return jsonify(f"Database version : {r}")
+    return f"Database version : {r}"
 
 if __name__ != '__main__':
     gunicorn_logger = logging.getLogger('gunicorn.error')
