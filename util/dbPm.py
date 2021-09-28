@@ -20,10 +20,10 @@ class DBPm:
         cur.close()
         return rr
 
-    def INS_msg_log(self, id, msgtype, text, timestamp, stype, suid):
+    def INS_msg_log(self, id, msgtype, text, dt, stype, suid):
         cur = self.conn.cursor()
-        query = sql.SQL("INSERT INTO {}(id, type, text, timestamp, source_uid, source_type) VALUES(%s, %s, %s, %s, %s, %s)").format(sql.Identifier('messaging_log'))
-        cur.execute(query, (id, msgtype, text, timestamp, suid, stype))
+        query = sql.SQL("INSERT INTO {}(id, type, text, datetime, source_uid, source_type) VALUES(%s, %s, %s, %s, %s, %s)").format(sql.Identifier('messaging_log'))
+        cur.execute(query, (id, msgtype, text, dt, suid, stype))
         r = cur.fetchall()
         app.logger.debug(f"INS_msg_log_r:{r}")
         self.conn.commit()
