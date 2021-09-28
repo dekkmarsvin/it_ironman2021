@@ -3,7 +3,7 @@ from flask_restful import Api, utils
 import sqlite3 as db
 from types import SimpleNamespace
 import logging
-from datetime import date
+from datetime import datetime
 from linebot import (
     LineBotApi, WebhookHandler
 )
@@ -15,7 +15,7 @@ from linebot.models import (
 )
 import os
 import psycopg2
-
+import pytz
 import util.dbcc as dbcc
 
 app = Flask(__name__)
@@ -23,6 +23,7 @@ api = Api(app)
 
 line_bot_api = LineBotApi(os.environ['LCAT'])
 handler = WebhookHandler(os.environ['Cst'])
+TWT = pytz.timezone('Asia/Taipei')
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -45,7 +46,7 @@ def callback():
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     prof = line_bot_api.get_profile(event.source.user_id)
-    format_time = date.fromtimestamp(event.timestamp / 1000.0).strftime("%Y/%m/%d %H:%M:%S")
+    format_time = datetime.fromtimestamp(event.timestamp / 1000.0).astimezone(TWT).strftime("%Y/%m/%d %H:%M:%S")
     app.logger.debug(f"message:{event.message.type}-{event.message.id} = {event.message.text}, from {event.source.type}:{prof.display_name}({event.source.user_id}) at {format_time}")
     line_bot_api.reply_message(
         event.reply_token,
