@@ -17,6 +17,7 @@ import os
 import psycopg2
 import pytz
 import util.dbcc as dbcc
+import util.dbPm as dbPm
 
 app = Flask(__name__)
 api = Api(app)
@@ -24,6 +25,7 @@ api = Api(app)
 line_bot_api = LineBotApi(os.environ['LCAT'])
 handler = WebhookHandler(os.environ['Cst'])
 TWT = pytz.timezone('Asia/Taipei')
+dbpm = dbPm.DBPm()
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -48,6 +50,7 @@ def handle_message(event):
     prof = line_bot_api.get_profile(event.source.user_id)
     format_time = datetime.fromtimestamp(event.timestamp / 1000.0).astimezone(TWT).strftime("%Y/%m/%d %H:%M:%S")
     app.logger.debug(f"message:{event.message.type}-{event.message.id} = {event.message.text}, from {event.source.type}:{prof.display_name}({event.source.user_id}) at {format_time}")
+    
     line_bot_api.reply_message(
         event.reply_token,
         TextSendMessage(text=event.message.text))
@@ -69,14 +72,16 @@ def HelloWorld():
     #     return "Database ONLINE"
     # else:
     #     return "Database OFFLINE"
-    DATABASE_URL = os.environ['DATABASE_URL']
-    conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-    cur = conn.cursor()
-    cur.execute('SELECT VERSION()')
-    rr = cur.fetchall()
-    conn.commit()
-    cur.close()
-    return jsonify(f"Database version : {rr}")
+    # DATABASE_URL = os.environ['DATABASE_URL']
+    # conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+    # cur = conn.cursor()
+    # cur.execute('SELECT VERSION()')
+    # rr = cur.fetchall()
+    # conn.commit()
+    # cur.close()
+    r = dbpm.DBver()
+    app.logger.debug(f"DBver:{r}")
+    return jsonify(f"Database version : {r}")
 
 if __name__ != '__main__':
     gunicorn_logger = logging.getLogger('gunicorn.error')
