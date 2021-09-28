@@ -80,8 +80,8 @@ def HelloWorld():
     # conn.commit()
     # cur.close()
     r = dbpm.DBver()
-    app.logger.debug(f"DBver:{r}")
-    return jsonify(f"Database version : {r}")
+    app.logger.debug(f"type:{type(r)}, {r}")
+    return r
 
 if __name__ != '__main__':
     gunicorn_logger = logging.getLogger('gunicorn.error')
