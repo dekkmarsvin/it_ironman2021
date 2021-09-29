@@ -36,6 +36,8 @@ class DBPm:
 
         cur = self.conn.cursor()
         query = sql.SQL("SELECT 1 AS isExists FROM {} WHERE uid = %s").format(sql.Identifier('customers'))
+        app.logger.debug(f"query={query}")
+        app.logger.debug(f"prof.user_id={prof.user_id}")
         cur.execute(query, (prof.user_id))
         r = cur.fetchone()
         app.logger(f"INS_UPD_cus:{r['isExists']}")
