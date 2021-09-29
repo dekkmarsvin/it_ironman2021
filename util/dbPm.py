@@ -26,3 +26,26 @@ class DBPm:
         cur.execute(query, (id, msgtype, text, dt, suid, stype))
         self.conn.commit()
         cur.close()
+
+    def INS_UPD_cus(self, prof):
+        # display_name (str) – Display name
+        # user_id (str) – User ID
+        # picture_url (str) – Image URL
+        # status_message (str) – Status message
+        # language (str) – Get user’s language
+
+        cur = self.conn.cursor()
+        query = sql.SQL("SELECT 1 AS isExists FROM {} WHERE uid = %s").format(sql.Identifier('customers'))
+        cur.execute(query, (prof.user_id))
+        r = cur.fetchone()
+        app.logger(f"INS_UPD_cus:{r['isExists']}")
+        cur.close()
+
+        if(r['isExists'] != 1):
+            cur = self.conn.cursor()
+            query = sql.SQL("INSERT INFO {}(uid, displayName, language) VALUES(%s, %s, %s)").format(sql.Identifier('customers'))
+            cur.execute(query, (prof.user_id, prof.display_name, prof.language))
+            self.conn.commit()
+            app.logger.debug(f"New User:{prof.display_name} - {prof.user_id}, Created")
+            cur.close()
+        return True

@@ -11,9 +11,10 @@ from linebot.exceptions import (
     InvalidSignatureError
 )
 from linebot.models import (
-    MessageEvent, TextMessage, TextSendMessage,
+    MessageEvent, TextMessage, TextSendMessage
 )
 import os
+from linebot.models.events import FollowEvent
 import psycopg2
 import pytz
 import util.dbcc as dbcc
@@ -45,6 +46,11 @@ def callback():
 
     return 'OK'
 
+@handler.add(FollowEvent)
+def handle_follow(event):
+    prof = line_bot_api.get_profile(event.source.user_id)
+    dbpm.INS_UPD_cus(prof)
+
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     prof = line_bot_api.get_profile(event.source.user_id)
@@ -67,7 +73,7 @@ def default_route():
     return jsonify('hello world')
 
 @app.route("/dbstatus", methods=['GET'])
-def HelloWorld():
+def DBversion():
     r = dbpm.DBver()
     app.logger.debug(f"type:{type(r)}, {r}")
     return jsonify(f"Database Version: {r}")
