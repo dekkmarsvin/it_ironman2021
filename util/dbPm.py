@@ -40,7 +40,7 @@ class DBPm:
         app.logger.debug(f"prof.user_id={prof.user_id}")
         cur.execute(query, ([prof.user_id]))
         r = cur.fetchone()
-        app.logger.debug(f"INS_UPD_cus:{r}")
+        app.logger.debug(f"INS_UPD_cus:{r}, type:{type(r)}")
         cur.close()
 
         if(r is not None):
@@ -50,3 +50,5 @@ class DBPm:
             self.conn.commit()
             app.logger.debug(f"New User:{prof.display_name} - {prof.user_id}, Created")
             cur.close()
+        else:
+            app.logger.debug("unBlock User")
