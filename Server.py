@@ -50,6 +50,9 @@ def callback():
 def handle_follow(event):
     prof = line_bot_api.get_profile(event.source.user_id)
     dbpm.INS_UPD_cus(prof)
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text="Hello 歡迎鐵人賽的勇者"))
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
