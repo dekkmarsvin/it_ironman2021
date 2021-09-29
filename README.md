@@ -75,6 +75,7 @@
     - [紀錄Line對話](#紀錄line對話)
     - [Summary](#summary)
   - [[day17]使用者名稱表格](#day17使用者名稱表格)
+  - [[day18] 追蹤 & 封鎖事件處理](#day18-追蹤--封鎖事件處理)
 
 ## [Day1] 金融支付API
 
@@ -1640,3 +1641,37 @@ dbpm.INS_msg_log(event.message.id, event.message.type, event.message.text, dt.is
 你有沒有注意到，使用者名稱如果想儲存的話，是不是每一筆訊息都要查詢一次，這樣對話量一多會頻繁的向Line官方送出API請求，很容易造成被Ban，明天做一個UID與名稱對應表格吧
 
 ## [day17]使用者名稱表格
+
+一樣先從建立表格開始，這張表格除了儲存來自Line的使用者資訊，也預留了未來資料的輸入欄位
+
+欄位|說明
+---|---
+uid|Line使用者ID
+displayName|Line顯示名稱
+language|zh-hant、en-us....
+pictureUrl|使用者大頭貼
+FirstName|名
+LastName|姓
+phoneNumber|電話
+Address|地址
+Activate|啟用
+
+```sql
+CREATE TABLE IF NOT EXISTS public.customers
+(
+    uid text COLLATE pg_catalog."default" NOT NULL,
+    "displayName" text COLLATE pg_catalog."default" NOT NULL,
+    language text COLLATE pg_catalog."default",
+    "pictureUrl" text COLLATE pg_catalog."default",
+    "FirstName" text COLLATE pg_catalog."default",
+    "LastName" text COLLATE pg_catalog."default",
+    "phoneNumber" text COLLATE pg_catalog."default",
+    "Address" text COLLATE pg_catalog."default",
+    "Activate" boolean DEFAULT true,
+    CONSTRAINT customers_pkey PRIMARY KEY (uid)
+)
+
+TABLESPACE pg_default;
+```
+
+## [day18] 追蹤 & 封鎖事件處理

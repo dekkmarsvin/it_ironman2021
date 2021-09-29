@@ -49,4 +49,10 @@ class DBPm:
             cur.close()
             return 1
         else:
+            cur = self.conn.cursor()
+            query = sql.SQL("UPDATE {} SET \"displayName\"=%s, language=%s, \"pictureUrl\"=%s, \"Activate\"=%s WHERE uid = %s").format(sql.Identifier('customers'))
+            cur.execute(query, (prof.display_name, prof.language, prof.picture_url, "TRUE", prof.user_id))
+            self.conn.commit()
+            app.logger.debug(f"New User:{prof.display_name} - {prof.user_id}, Created")
+            cur.close()
             return 2
