@@ -45,7 +45,7 @@ class DBPm:
 
         if(not r):
             cur = self.conn.cursor()
-            query = sql.SQL("INSERT INFO {}(uid, displayName, language) VALUES(%s, %s, %s)").format(sql.Identifier('customers'))
+            query = sql.SQL("INSERT INTO {}(uid, displayName, language) VALUES(%s, %s, %s)").format(sql.Identifier('customers'))
             cur.execute(query, (prof.user_id, prof.display_name, prof.language))
             self.conn.commit()
             app.logger.debug(f"New User:{prof.display_name} - {prof.user_id}, Created")
