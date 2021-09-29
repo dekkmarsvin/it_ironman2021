@@ -43,7 +43,7 @@ class DBPm:
         app.logger.debug(f"INS_UPD_cus:{r}")
         cur.close()
 
-        if(r['isExists'] != 1):
+        if(r[0] != 1):
             cur = self.conn.cursor()
             query = sql.SQL("INSERT INFO {}(uid, displayName, language) VALUES(%s, %s, %s)").format(sql.Identifier('customers'))
             cur.execute(query, (prof.user_id, prof.display_name, prof.language))
