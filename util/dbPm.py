@@ -40,7 +40,7 @@ class DBPm:
         app.logger.debug(f"prof.user_id={prof.user_id}")
         cur.execute(query, ([prof.user_id]))
         r = cur.fetchone()
-        app.logger(f"INS_UPD_cus:{r['isExists']}")
+        app.logger(f"INS_UPD_cus:{r}")
         cur.close()
 
         if(r['isExists'] != 1):
