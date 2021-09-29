@@ -51,3 +51,4 @@ class DBPm:
             app.logger.debug(f"New User:{prof.display_name} - {prof.user_id}, Created")
             cur.close()
         return True
+
