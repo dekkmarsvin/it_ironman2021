@@ -49,10 +49,12 @@ def callback():
 @handler.add(FollowEvent)
 def handle_follow(event):
     prof = line_bot_api.get_profile(event.source.user_id)
-    dbpm.INS_UPD_cus(prof)
+    r = dbpm.INS_UPD_cus(prof)
+    if r == 1:msg = "Hello 歡迎鐵人賽的勇者"
+    else: msg = "Hello 歡迎鐵人賽的勇者回來"
     line_bot_api.reply_message(
         event.reply_token,
-        TextSendMessage(text="Hello 歡迎鐵人賽的勇者"))
+        TextSendMessage(text=msg))
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):

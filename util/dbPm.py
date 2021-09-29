@@ -36,19 +36,17 @@ class DBPm:
 
         cur = self.conn.cursor()
         query = sql.SQL("SELECT 1 AS isExists FROM {} WHERE uid = %s").format(sql.Identifier('customers'))
-        app.logger.debug(f"query={query}")
-        app.logger.debug(f"prof.user_id={prof.user_id}")
         cur.execute(query, ([prof.user_id]))
         r = cur.fetchone()
-        app.logger.debug(f"INS_UPD_cus:{r}, type:{type(r)}")
         cur.close()
 
         if(not r):
             cur = self.conn.cursor()
-            query = sql.SQL("INSERT INTO {}(uid, \"displayName\", language) VALUES(%s, %s, %s)").format(sql.Identifier('customers'))
-            cur.execute(query, (prof.user_id, prof.display_name, prof.language))
+            query = sql.SQL("INSERT INTO {}(uid, \"displayName\", language, \"pictureUrl\") VALUES(%s, %s, %s)").format(sql.Identifier('customers'))
+            cur.execute(query, (prof.user_id, prof.display_name, prof.language, prof.picture_url))
             self.conn.commit()
             app.logger.debug(f"New User:{prof.display_name} - {prof.user_id}, Created")
             cur.close()
+            return 1
         else:
-            app.logger.debug("unBlock User")
+            return 2
