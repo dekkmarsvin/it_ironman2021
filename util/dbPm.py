@@ -67,8 +67,8 @@ class DBPm:
             e_time = (datetime.now() + timedelta(days=7)).isoformat()
             cur = self.conn.cursor()
 
-            query = sql.SQL("INSERT INTO {}(type, code, s_time, e_time, times, userids) VALUES (%s, %s, %s, %s, %d, '{%s}');").format(sql.Identifier('coupon'))
-            cur.execute(query, ("NBcp", code, s_time, e_time, 1, id))
+            query = sql.SQL("INSERT INTO {}(type, code, s_time, e_time, times) VALUES (%s, %s, %s, %s, %d);").format(sql.Identifier('coupon'))
+            cur.execute(query, ("NBcp", code, s_time, e_time, 1))
             self.conn.commit()
             cur.close()
             return 1, code
