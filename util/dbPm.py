@@ -68,7 +68,7 @@ class DBPm:
             cur = self.conn.cursor()
 
             query = sql.SQL("INSERT INTO {}(type, code, s_time, e_time, times) VALUES (%s, %s, %s, %s, %s);").format(sql.Identifier('coupon'))
-            cur.execute(query, ("NBcp", code, s_time, e_time, str(1))
+            cur.execute(query, ("NBcp", code, s_time, e_time, str(1)))
             self.conn.commit()
             cur.close()
             return 1, code
