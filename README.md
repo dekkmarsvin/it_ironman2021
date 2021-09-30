@@ -75,6 +75,8 @@
     - [紀錄Line對話](#紀錄line對話)
     - [Summary](#summary)
   - [[day17]使用者名稱表格](#day17使用者名稱表格)
+    - [實作紀錄使用者資訊](#實作紀錄使用者資訊)
+      - [Postgresql採到的坑](#postgresql採到的坑)
   - [[day18] 追蹤 & 封鎖事件處理](#day18-追蹤--封鎖事件處理)
 
 ## [Day1] 金融支付API
@@ -1673,5 +1675,52 @@ CREATE TABLE IF NOT EXISTS public.customers
 
 TABLESPACE pg_default;
 ```
+
+### 實作紀錄使用者資訊
+
+```python
+def INS_UPD_cus(self, prof):
+    # display_name (str) – Display name
+    # user_id (str) – User ID
+    # picture_url (str) – Image URL
+    # status_message (str) – Status message
+    # language (str) – Get user’s language
+
+    cur = self.conn.cursor()
+    query = sql.SQL("SELECT 1 AS isExists FROM {} WHERE uid = %s").format(sql.Identifier('customers'))
+    cur.execute(query, ([prof.user_id]))
+    r = cur.fetchone()
+    cur.close()
+
+    if(not r):
+        cur = self.conn.cursor()
+        query = sql.SQL("INSERT INTO {}(uid, \"displayName\", language, \"pictureUrl\") VALUES(%s, %s, %s, %s)").format(sql.Identifier('customers'))
+        cur.execute(query, (prof.user_id, prof.display_name, prof.language, prof.picture_url))
+        self.conn.commit()
+        app.logger.debug(f"New User:{prof.display_name} - {prof.user_id}, Created")
+        cur.close()
+        return 1
+    else:
+        cur = self.conn.cursor()
+        query = sql.SQL("UPDATE {} SET \"displayName\"=%s, language=%s, \"pictureUrl\"=%s, \"Activate\"=%s WHERE uid = %s").format(sql.Identifier('customers'))
+        cur.execute(query, (prof.display_name, prof.language, prof.picture_url, "TRUE", prof.user_id))
+        self.conn.commit()
+        app.logger.debug(f"User:{prof.display_name} - {prof.user_id}, UPDATED")
+        cur.close()
+        return 2
+
+prof = line_bot_api.get_profile(event.source.user_id)
+INS_UPD_cus(prof)
+```
+
+在WebhookHandler被呼叫時，會依據訊息中的user_id搜尋資料庫，如果沒有這個Line UID，則會新增這個新使用者，反之如果是既有用戶，則會更新資料庫中使用者的顯示名稱等資訊
+
+#### Postgresql採到的坑
+
+```sql
+query = sql.SQL("INSERT INTO {}(uid, \"displayName\", language, \"pictureUrl\") VALUES(%s, %s, %s, %s)").format(sql.Identifier('customers'))
+```
+
+為什麼UID不用加雙引號「"」，displayName要加，language卻又不用加，下一個pictureUrl又要加雙引號，答案是**大小寫**，如果你在postgresql中建立了帶有大小寫的欄位名稱，請務必要加上雙引號，這困擾了我快2個小時找錯誤.....
 
 ## [day18] 追蹤 & 封鎖事件處理
