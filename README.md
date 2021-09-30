@@ -78,6 +78,12 @@
     - [實作紀錄使用者資訊](#實作紀錄使用者資訊)
       - [Postgresql採到的坑](#postgresql採到的坑)
   - [[day18] 追蹤 & 封鎖事件處理](#day18-追蹤--封鎖事件處理)
+    - [Follow(unblocked) Event](#followunblocked-event)
+      - [Python 實作 FollowEvent handler](#python-實作-followevent-handler)
+    - [會員註冊 & 回歸獎品](#會員註冊--回歸獎品)
+      - [優惠券表格](#優惠券表格)
+      - [PostgreSQL AUTO INCREMENT](#postgresql-auto-increment)
+      - [實作發給優惠券](#實作發給優惠券)
 
 ## [Day1] 金融支付API
 
@@ -1724,3 +1730,99 @@ query = sql.SQL("INSERT INTO {}(uid, \"displayName\", language, \"pictureUrl\") 
 為什麼UID不用加雙引號「"」，displayName要加，language卻又不用加，下一個pictureUrl又要加雙引號，答案是**大小寫**，如果你在postgresql中建立了帶有大小寫的欄位名稱，請務必要加上雙引號，這困擾了我快2個小時找錯誤.....
 
 ## [day18] 追蹤 & 封鎖事件處理
+
+當獲得一個新會員，會希望使用者能夠了解如何使用系統，會提供使用者一份指引如何使用，同時也希望使用者盡快進行第一筆消費，獲得正向回饋，也就是所謂新會員註冊禮；同時在使用者封鎖官方帳號~~嫌太煩了~~一陣子後，如果使用者重新追蹤or解除封鎖，這時也建議推送一個專屬優惠(回歸禮包)，今天來實作這個功能吧
+
+### Follow(unblocked) Event
+
+這個Event會在使用者加官方帳號為好友與解除封鎖時觸發，其大致的結構如下:
+
+```json
+{
+  "event":[
+    {
+      "replyToken": "nHuyWiB7yP5Zw52FIkcQobQuGDXCTA",
+      "type": "follow",
+      "mode": "active",
+      "timestamp": 1462629479859,
+      "source": {
+        "type": "user",
+        "userId": "U4af4980629..."
+      }
+    }
+  ]
+}
+```
+
+需要的參數為source與replyToken，運用昨天撰寫的function INS_UPD_cus(self, prof)，當是新用戶時回傳1，是老客戶時回傳2，於是可以依據此給出歡迎訊息
+
+#### Python 實作 FollowEvent handler
+
+當使用者加入時，如果是新使用者，則顯示"歡迎鐵人賽的勇者"，如果以前曾經加為好友，則顯示歡迎鐵人賽的勇者回來
+
+```python
+@handler.add(FollowEvent)
+def handle_follow(event):
+    prof = line_bot_api.get_profile(event.source.user_id)
+    r = dbpm.INS_UPD_cus(prof)
+    if r == 1:msg = "Hello 歡迎鐵人賽的勇者"
+    else: msg = "Hello 歡迎鐵人賽的勇者回來"
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text=msg))
+```
+
+### 會員註冊 & 回歸獎品
+
+#### 優惠券表格
+
+一樣從拉一個表格開始
+
+```sql
+CREATE TABLE IF NOT EXISTS public.coupon
+(
+    cpid bigint NOT NULL DEFAULT nextval('coupon_cpid_seq'::regclass),
+    type text COLLATE pg_catalog."default" NOT NULL,
+    code text COLLATE pg_catalog."default" NOT NULL,
+    "Activate" boolean NOT NULL DEFAULT false,
+    s_time timestamp with time zone,
+    e_time timestamp with time zone,
+    times integer,
+    userids text[] COLLATE pg_catalog."default",
+    CONSTRAINT coupon_pkey PRIMARY KEY (cpid)
+)
+TABLESPACE pg_default;
+```
+
+#### PostgreSQL AUTO INCREMENT
+
+你有3種預先定義的自動增加變數方式可以選擇
+
+Type|Size|Range
+---|---|---
+SMALLSERIAL|2byte|1-32,767
+SERIAL|4byte|1-2,147,483,647
+BIGSERIAL|8byte|1-922,337,2036,854,775,807
+
+#### 實作發給優惠券
+
+```python
+def INS_CPN(self, id, cptype):
+    if(cptype == "new"):
+        import string, random
+        code = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(8))
+        s_time = datetime.now().isoformat()
+        e_time = (datetime.now() + timedelta(days=7)).isoformat()
+        cur = self.conn.cursor()
+        id = '{' + id + '}'
+        query = sql.SQL("INSERT INTO {}(type, code, s_time, e_time, times, userids) VALUES (%s, %s, %s, %s, %s, %s);").format(sql.Identifier('coupon'))
+        cur.execute(query, ("NBcp", code, s_time, e_time, str(1), id))
+        self.conn.commit()
+        cur.close()
+        return 1, code
+    else:
+        print()
+        return 0, "placeholder Due no coupon"
+```
+
+今天還在弄Line的官方帳號介面模板，暫時還沒弄明白，先寫點別的
