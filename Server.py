@@ -57,7 +57,7 @@ def handle_follow(event):
             msg = msg + f"\n這是您的好友見面禮:{code}"
     else:
         msg = "Hello 歡迎鐵人賽的勇者回來"
-        cr, code = dbpm.INS_CPN(event.source.user_id, "new")
+        cr, code = dbpm.INS_CPN(event.source.user_id, "back")
         if(cr == 1):
             msg = msg + f"\n這是您的回歸小禮物:{code}"
     line_bot_api.reply_message(
