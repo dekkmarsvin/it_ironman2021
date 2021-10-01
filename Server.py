@@ -52,7 +52,7 @@ def handle_follow(event):
     r = dbpm.INS_UPD_cus(prof)
     if r == 1:
         msg = "Hello 歡迎鐵人賽的勇者"
-        cpl = dbpm.QUY_CPN(id, "new")
+        cpl = dbpm.QUY_CPN(event.source.user_id, "new")
         if(cpl and len(cpl) > 0):
             app.logger.debug(f"已經發過優惠券:{cpl}")
         else:
@@ -61,13 +61,14 @@ def handle_follow(event):
                 msg = msg + f"\n這是您的好友見面禮:{code}"
     else:
         msg = "Hello 歡迎鐵人賽的勇者回來"
-        cpl = dbpm.QUY_CPN(id, "back")
+        cpl = dbpm.QUY_CPN(event.source.user_id, "back")
         if(cpl and len(cpl) > 0):
             app.logger.debug(f"已經發過優惠券:{cpl}")
         else:
             cr, code = dbpm.INS_CPN(event.source.user_id, "back")
             if(cr == 1):
                 msg = msg + f"\n這是您的回歸小禮物:{code}"
+    
     line_bot_api.reply_message(
         event.reply_token,
         TextSendMessage(text=msg))
