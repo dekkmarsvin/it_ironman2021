@@ -62,16 +62,36 @@ class DBPm:
     def INS_CPN(self, id, cptype):
         if(cptype == "new"):
             import string, random
-            code = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(8))
-            s_time = datetime.now().isoformat()
-            e_time = (datetime.now() + timedelta(days=7)).isoformat()
-            cur = self.conn.cursor()
-            id = '{' + id + '}'
-            query = sql.SQL("INSERT INTO {}(type, code, s_time, e_time, times, userids) VALUES (%s, %s, %s, %s, %s, %s);").format(sql.Identifier('coupon'))
-            cur.execute(query, ("NBcp", code, s_time, e_time, str(1), id))
-            self.conn.commit()
-            cur.close()
-            return 1, code
+
+            old_cp = self.QUY_CPN(id, cptype)
+            app.logger.debug(f"old_cp:{old_cp}")
+            if(old_cp and len(old_cp) > 0):
+                app.logger.debug(f"已經發過優惠券:{old_cp}")
+                return 0, "已經發過優惠券"
+            else:
+                code = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(8))
+                s_time = datetime.now().isoformat()
+                e_time = (datetime.now() + timedelta(days=7)).isoformat()
+                cur = self.conn.cursor()
+                id = '{' + id + '}'
+                query = sql.SQL("INSERT INTO {}(type, code, s_time, e_time, times, userids) VALUES (%s, %s, %s, %s, %s, %s);").format(sql.Identifier('coupon'))
+                cur.execute(query, ("NBcp", code, s_time, e_time, str(1), id))
+                self.conn.commit()
+                cur.close()
+                return 1, code
         else:
             print()
             return 0, "placeholder Due no coupon"
+
+    def QUY_CPN(self, id, cptype):
+        cur = self.conn.cursor()
+        query = sql.SQL("SELECT * from coupon WHERE %s = ANY (userids) and type = %s").format(sql.Identifier('coupon'))
+        cur.execute(query, (id, cptype))
+        r = cur.fetchall()
+        cur.close()
+        return r
+
+    def timedelta_bydays(days=7):
+        s_time = datetime.now().isoformat()
+        e_time = (datetime.now() + timedelta(days=days)).isoformat()
+        return s_time, e_time

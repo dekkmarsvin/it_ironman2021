@@ -84,6 +84,7 @@
       - [優惠券表格](#優惠券表格)
       - [PostgreSQL AUTO INCREMENT](#postgresql-auto-increment)
       - [實作發給優惠券](#實作發給優惠券)
+  - [[day19] 建立選單](#day19-建立選單)
 
 ## [Day1] 金融支付API
 
@@ -1826,3 +1827,5 @@ def INS_CPN(self, id, cptype):
 ```
 
 今天還在弄Line的官方帳號介面模板，暫時還沒弄明白，先寫點別的
+
+## [day19] 建立選單
