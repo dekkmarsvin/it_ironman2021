@@ -50,10 +50,14 @@ def callback():
 def handle_follow(event):
     prof = line_bot_api.get_profile(event.source.user_id)
     r = dbpm.INS_UPD_cus(prof)
-    cr, code = dbpm.INS_CPN(event.source.user_id, "new")
-    if r == 1:msg = "Hello 歡迎鐵人賽的勇者"
+    if r == 1:
+        msg = "Hello 歡迎鐵人賽的勇者"
+        cr, code = dbpm.INS_CPN(event.source.user_id, "new")
+        if(cr == 1):
+            msg = msg + f"\n這是您的好友見面禮:{code}"
     else:
         msg = "Hello 歡迎鐵人賽的勇者回來"
+        cr, code = dbpm.INS_CPN(event.source.user_id, "new")
         if(cr == 1):
             msg = msg + f"\n這是您的回歸小禮物:{code}"
     line_bot_api.reply_message(
