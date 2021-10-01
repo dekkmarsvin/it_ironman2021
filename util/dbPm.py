@@ -61,16 +61,14 @@ class DBPm:
 
     def INS_CPN(self, id, cptype):
         if(cptype == "new"):
-            import string, random
             old_cp = self.QUY_CPN(id, cptype)
             app.logger.debug(f"old_cp:{old_cp}")
             if(old_cp and len(old_cp) > 0):
                 app.logger.debug(f"已經發過優惠券:{old_cp}")
                 return 0, "已經發過優惠券"
             else:
-                code = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(8))
-                s_time = datetime.now().isoformat()
-                e_time = (datetime.now() + timedelta(days=7)).isoformat()
+                code = self.gencode()
+                s_time, e_time = self.timedelta_bydays(days=7)
                 cur = self.conn.cursor()
                 id = '{' + id + '}'
                 query = sql.SQL("INSERT INTO {}(type, code, s_time, e_time, times, userids) VALUES (%s, %s, %s, %s, %s, %s);").format(sql.Identifier('coupon'))
@@ -85,9 +83,8 @@ class DBPm:
                 app.logger.debug(f"已經發過優惠券:{old_cp}")
                 return 0, "已經發過優惠券"
             else:
-                code = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(8))
-                s_time = datetime.now().isoformat()
-                e_time = (datetime.now() + timedelta(days=7)).isoformat()
+                code = self.gencode()
+                s_time, e_time = self.timedelta_bydays(days=7)
                 cur = self.conn.cursor()
                 id = '{' + id + '}'
                 query = sql.SQL("INSERT INTO {}(type, code, s_time, e_time, times, userids) VALUES (%s, %s, %s, %s, %s, %s);").format(sql.Identifier('coupon'))
@@ -111,3 +108,8 @@ class DBPm:
         s_time = datetime.now().isoformat()
         e_time = (datetime.now() + timedelta(days=days)).isoformat()
         return s_time, e_time
+
+    def gencode(self, mode=0):
+        import string, random
+        if(mode == 0):
+            return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(8))
