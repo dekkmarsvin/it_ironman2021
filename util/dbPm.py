@@ -104,7 +104,7 @@ class DBPm:
         cur.close()
         return r
 
-    def timedelta_bydays(days=7):
+    def timedelta_bydays(self, days=7):
         s_time = datetime.now().isoformat()
         e_time = (datetime.now() + timedelta(days=days)).isoformat()
         return s_time, e_time
