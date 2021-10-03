@@ -91,6 +91,7 @@
   - [[day21] 訊息查詢服務OrderPayQuery](#day21-訊息查詢服務orderpayquery)
     - [大BUG?](#大bug)
     - [訊息查詢服務OrderPayQuery服務說明](#訊息查詢服務orderpayquery服務說明)
+    - [實作接收PayToken並查詢狀態](#實作接收paytoken並查詢狀態)
 
 ## [Day1] 金融支付API
 
@@ -2018,3 +2019,109 @@ CREATE TABLE IF NOT EXISTS public.payment_log
 ![BUG-3](readme/d21-03.png)
 
 ### 訊息查詢服務OrderPayQuery服務說明
+
+這個部份因為需要公網IP讓永豐系統打回來，所以拖到現在才寫；在向豐收款(FunBIZ)建立訂單成功後，還記得前面的BackendURL跟ReturnURL嗎，永豐系統會通過POST方式傳遞付款訂單是否正確成立的資訊，可以透過這串PayToken複查當初送出去的交易訂單請求
+
+流程概括如下:
+
+1. 使用OrderCreate建立付款請求
+2. 接收OrderCreate自永豐回傳之付款資訊(信用卡、ATM付款資訊等)
+3. 付款完成後，永豐會從ReturnURL與BackendURL兩個網址傳送付款Token
+   1. ReturnURL透過使用者的瀏覽器傳輸資料(Only信用卡)
+   2. BackendURL透過直接呼叫商家的API傳輸資料
+4. 商家可以憑藉取得的PayToken進行付款狀態的查詢
+
+簡單來說就是看到付款狀態顯示:PayOut就可以變更訂單狀態為待出貨了，小抱怨一下PayOut的中文解釋是**付款結果**，我一直在想付款結果的結果在哪裡，看了半天，確定其實就是付款成功的意思.....
+
+### 實作接收PayToken並查詢狀態
+
+把很久沒用的GenApi.py挖出來
+
+一樣，所有資料的傳送過程，一樣要經過計算AES-CBC、取得Nonce等的流程，詳細可以往回翻，準備好解密的所有流程
+
+```python
+def loadcfg():
+  Hash = SimpleNamespace(A1 = os.environ['A1'], A2 = os.environ['A2'], B1 = os.environ['B1'], B2 = os.environ['B2'])
+  cfg = SimpleNamespace(Version = os.environ ['Version'], ShopNo = os.environ['ShopNo'], HashID = HashID(Hash), \
+                        Api_URL = os.environ['Api_URL'], Nonce_URL = os.environ['Nonce_URL'], BackendURL = os.environ['BackendURL'], \
+                      ReturnURL = os.environ['ReturnURL'])
+
+def OrderPayQuery(ShopNo=os.environ['ShopNo'], PayToken=None):
+  if(not ShopNo or not PayToken):return None
+  nonce = GetNonce(cfg)
+  msg = json.dumps({"ShopNo":ShopNo, "PayToken":PayToken}, indent=4)
+  sign = GetRespSign(msg=msg, nonce=nonce, HashID=cfg.HashID)
+  iv = GenIV(nonce)
+  emsg = AES_CBC_Encrpt(cfg.HashID, iv, msg)
+  payload = GenRequest(cfg, "OrderPayQuery", sign, nonce, emsg)
+  resp = APIPm.sendreq(url=cfg.Api_URL, data=payload)
+  funbiz_msg = Response_Decrypt(resp, cfg.HashID)
+  return funbiz_msg
+```
+
+接收PayToken，修改Server.py，新增backendURL與order-summary兩個route，這兩個實作的功能是一樣的，前者給永豐雲呼叫，後者是信用卡付款完成後的頁面跳轉
+
+```python
+@app.route('/funBIZ_backend', methods=['POST'])
+def funBIZ_route():
+    # app.logger.debug(f"headers:{dict(request.headers)}")
+    content = request.json
+    # app.logger.debug(f"content:{content}")
+    if(content['ShopNo'] == os.environ['ShopNo']):
+        resp = FunBizApi.OrderPayQuery(PayToken=content['PayToken'])
+        app.logger.debug(f"OrderPayQuery:{resp}")
+        return jsonify({'Status':'S'})
+    else:
+        return jsonify({'Status':'F'})
+
+@app.route('/order-summary', methods=['POST'])
+def order_summary_route():
+    # app.logger.debug(f"headers:{dict(request.headers)}")
+    content = request.form
+    # app.logger.debug(f"content:{content}")
+    if(content.get('ShopNo') == os.environ['ShopNo']):
+        resp = FunBizApi.OrderPayQuery(PayToken=content.get('PayToken'))
+        app.logger.debug(f"OrderPayQuery:{resp}")
+    return jsonify({'order-summary':'S'})
+```
+
+永豐系統通過POST與JSON格式傳送PayToken，以下為傳遞過來的範例資料:
+
+```json
+{
+  "ShopNo":"BA0026_001",
+  "PayToken":"da1547c3d0d1649af5049125b0880c0e227f31e107cbf4f0995bed28d0f066c1"
+}
+```
+
+通過訊息查詢服務OrderPayQuery進行付款狀態複查，可以解密得到:
+
+```json
+{
+  "ShopNo":"NA0249_001",
+  "PayToken":"301707c1aa38db8c724b844a18fb14fe92457dc25874d0882cf44def3c3a8f2d",
+  "Date":"202110040028",
+  "Status":"S",
+  "Description":"S0000 – 處理成功",
+  "TSResultContent": {
+    "APType":"PayOut",
+    "TSNo":"NA024900000538",
+    "OrderNo":"2021100400003",
+    "ShopNo":"NA0249_001",
+    "PayType":"C",
+    "Amount":"40400",
+    "Status":"S",
+    "Description":"",
+    "Param1":"",
+    "Param2":"",
+    "Param3":"",
+    "LeftCCNo":"",
+    "RightCCNo":"",
+    "CCExpDate":"",
+    "CCToken":"",
+    "PayDate":"202110040028"
+  }
+}
+```
+
+今天完成接收付款並複查付款資訊功能，明天準備整合進資料庫紀錄
