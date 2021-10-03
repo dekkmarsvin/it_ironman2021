@@ -135,9 +135,8 @@ def OrderPayQuery(ShopNo=os.environ['ShopNo'], PayToken=None):
     payload = GenRequest(cfg, "OrderPayQuery", sign, nonce, emsg)
     print(payload)
     resp = APIPm.sendreq(url=cfg.Api_URL, data=payload)
-    resp = json.loads(resp.text)
-    print(resp)
-    return resp
+    funbiz_msg = Response_Decrypt(resp, cfg.HashID)
+    return funbiz_msg
 
 def loadcfg():
     Hash = SimpleNamespace(A1 = os.environ['A1'], A2 = os.environ['A2'], B1 = os.environ['B1'], B2 = os.environ['B2'])
