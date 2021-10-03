@@ -9,8 +9,12 @@ from Cryptodome.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 import os
 
+from flask.json import load
+
 from . import APIModel
 from . import APIPm
+
+cfg = None
 
 def xor_two_str(a,b):
     a = int(a,base=16)
@@ -128,6 +132,16 @@ def OrderPayQuery(ShopNo=os.environ['ShopNo'], PayToken=None):
     resp = json.loads(resp.text)
     print(resp)
     return resp
+
+def loadcfg():
+    Hash = SimpleNamespace(A1 = os.environ['A1'], A2 = os.environ['A2'], B1 = os.environ['B1'], B2 = os.environ['B2'])
+    cfg = SimpleNamespace(Version = os.environ ['Version'], ShopNo = os.environ['ShopNo'], HashID = HashID(Hash), \
+                         Api_URL = os.environ['Api_URL'], Nonce_URL = os.environ['Nonce_URL'], BackendURL = os.environ['BackendURL'], \
+                        ReturnURL = os.environ['ReturnURL'])
+    return cfg
+
+if __name__ != '__main__':
+    cfg = loadcfg()
 
 if __name__ == '__main__':
     # env = ConfigParser()
