@@ -9,8 +9,8 @@ from Cryptodome.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 import os
 
-import APIModel
-import APIPm
+from . import APIModel
+from . import APIPm
 
 def xor_two_str(a,b):
     a = int(a,base=16)
