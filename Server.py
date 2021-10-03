@@ -100,19 +100,20 @@ def funBIZ_route():
     app.logger.debug(f"headers:{dict(request.headers)}")
     content = request.json
     app.logger.debug(f"content:{content}")
-    return jsonify({'Status':'S'})
+    if(content['ShopNo'] == os.environ['ShopNo']):
+        resp = FunBizApi.OrderPayQuery(PayToken=content['PayToken'])
+        app.logger.debug(f"OrderPayQuery:{resp}")
+        return jsonify({'Status':'S'})
+    else:
+        return jsonify({'Status':'F'})
 
 @app.route('/order-summary', methods=['POST'])
 def order_summary_route():
     app.logger.debug(f"headers:{dict(request.headers)}")
-    content = request.json
+    content = request.form
     app.logger.debug(f"content:{content}")
-    if(content['ShopNo'] == os.environ['ShopNo']):
-        resp = FunBizApi.OrderPayQuery(PayToken=content['PayToken'])
-        app.logger.debug(f"OrderPayQuery:{resp}")
-        return jsonify({'order-summary':'S'})
-    else:
-        return jsonify({'order-summary':'F'})
+    return jsonify({'order-summary':'S'})
+
 
 @app.route("/dbstatus", methods=['GET'])
 def DBversion():
