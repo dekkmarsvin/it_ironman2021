@@ -11,8 +11,8 @@ import os
 
 from flask.json import load
 
-from app.util import APIModel
-from app.util import APIPm
+from util import APIModel
+from util import APIPm
 
 cfg = None
 
