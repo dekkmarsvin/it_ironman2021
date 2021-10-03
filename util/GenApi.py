@@ -128,9 +128,10 @@ def GetNonce(cfg):
 def OrderPayQuery(ShopNo=os.environ['ShopNo'], PayToken=None):
     if(not ShopNo or not PayToken):return None
     nonce = GetNonce(cfg)
-    payload = json.dumps({"ShopNo":ShopNo, "PayToken":PayToken}, indent=4)
-    sign = GetRespSign(msg=payload, nonce=nonce, HashID=cfg.HashID)
-    payload = GenRequest(cfg, "OrderPayQuery", sign, nonce, payload)
+    msg = json.dumps({"ShopNo":ShopNo, "PayToken":PayToken}, indent=4)
+    sign = GetRespSign(msg=msg, nonce=nonce, HashID=cfg.HashID)
+    payload = GenRequest(cfg, "OrderPayQuery", sign, nonce, msg)
+    print(payload)
     resp = APIPm.sendreq(url=cfg.Api_URL, data=payload)
     resp = json.loads(resp.text)
     print(resp)
