@@ -7,6 +7,7 @@ import hashlib
 from base64 import b64decode, b64encode
 from Cryptodome.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
+import os
 
 import APIModel
 import APIPm
@@ -121,20 +122,26 @@ def GetNonce(cfg):
     return json.loads(resp.text)['Nonce']
 
 if __name__ == '__main__':
-    env = ConfigParser()
-    env.read('env.ini')
-    Hash = SimpleNamespace(A1 = env['App']['A1'], A2 = env['App']['A2'], B1 = env['App']['B1'], B2 = env['App']['B2'])
-    cfg = SimpleNamespace(Version = env['App']['Version'], ShopNo = env['App']['ShopNo'], HashID = HashID(Hash), \
-        Api_URL = env['Server']['Api_URL'], Nonce_URL = env['Server']['Nonce_URL'])
+    # env = ConfigParser()
+    # env.read('env.ini')
+    # Hash = SimpleNamespace(A1 = env['App']['A1'], A2 = env['App']['A2'], B1 = env['App']['B1'], B2 = env['App']['B2'])
+    # cfg = SimpleNamespace(Version = env['App']['Version'], ShopNo = env['App']['ShopNo'], HashID = HashID(Hash), \
+    #     Api_URL = env['Server']['Api_URL'], Nonce_URL = env['Server']['Nonce_URL'])
     
     # org = APIModel.ReqOrderCreate(ShopNo=cfg.ShopNo, OrderNo="202007111119291751", Amount=60000, PayType="C", AutoBilling="Y", ExpMinutes=30, \
     #     PrdtName="信用卡訂單", ReturnURL="http://10.11.22.113:8803/QPay.ApiClient-Sandbox/Store/Return", BackendURL="https://sandbox.sinopac.com/funBIZ.ApiClient/AutoPush/PushSuccess")
     # print(GenOrderCreate(org, cfg))
 
+    Hash = SimpleNamespace(A1 = os.environ['A1'], A2 = os.environ['A2'], B1 = os.environ['B1'], B2 = os.environ['B2'])
+    cfg = SimpleNamespace(Version = os.environ ['Version'], ShopNo = os.environ['ShopNo'], HashID = HashID(Hash), \
+                         Api_URL = os.environ['Api_URL'], Nonce_URL = os.environ['Nonce_URL'], BackendURL = os.environ['BackendURL'], \
+                        ReturnURL = os.os.environ['ReturnURL'])
+
     neworder = APIModel.ReqOrderCreate(ShopNo="NA0249_001", OrderNo="2021091500002", Amount=40400, \
-                PrdtName="IPhone 13 Pro Max 256g", ReturnURL="https://0.0.0.0/store/Return", \
-                    BackendURL="https://0.0.0.0/bakcend", PayType="C", AutoBilling="Y", PayTypeSub="ONE")
+                PrdtName="IPhone 13 Pro Max 256g", ReturnURL=cfg.ReturnURL, \
+                    BackendURL=cfg.BackendURL, PayType="C", AutoBilling="Y", PayTypeSub="ONE")
     msg, OK = OrderCreate(neworder, cfg)
     if(OK):print("建立訂單成功")
     else:print("建立訂單失敗")
     print(msg)
+

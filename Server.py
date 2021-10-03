@@ -94,6 +94,20 @@ def default_route():
     app.logger.critical('this is a CRITICAL message')
     return jsonify('hello world')
 
+@app.route('/funBIZ_backend', methods=['POST'])
+def funBIZ_route():
+    app.logger.debug(f"headers:{dict(request.headers)}")
+    content = request.json
+    app.logger.debug(f"content:{content}")
+    return jsonify({'Status':'S'})
+
+@app.route('/order-summary')
+def order_summary_route():
+    app.logger.debug(f"headers:{dict(request.headers)}")
+    content = request.json
+    app.logger.debug(f"content:{content}")
+    return jsonify({'order-summary':'S'})
+
 @app.route("/dbstatus", methods=['GET'])
 def DBversion():
     r = dbpm.DBver()

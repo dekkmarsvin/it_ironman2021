@@ -84,7 +84,10 @@
       - [優惠券表格](#優惠券表格)
       - [PostgreSQL AUTO INCREMENT](#postgresql-auto-increment)
       - [實作發給優惠券](#實作發給優惠券)
-  - [[day19] 建立選單](#day19-建立選單)
+  - [[day19] 優惠券檢查](#day19-優惠券檢查)
+    - [檢查是否已經發給過優惠券](#檢查是否已經發給過優惠券)
+  - [[day20]談購物流程設計](#day20談購物流程設計)
+    - [建立訂單資料庫流程](#建立訂單資料庫流程)
 
 ## [Day1] 金融支付API
 
@@ -1828,4 +1831,175 @@ def INS_CPN(self, id, cptype):
 
 今天還在弄Line的官方帳號介面模板，暫時還沒弄明白，先寫點別的
 
-## [day19] 建立選單
+## [day19] 優惠券檢查
+
+今天結膜炎，看完醫生整個白天都躺在床上眼睛癢得要死動不了，晚餐後好一點，寫一點昨天缺漏的小東西
+
+講個優惠券設定的小故事，疫情升3級後被趕到城市另一邊的大樓上班，那邊有很便宜的果汁，還有不少老店，大概是疫情加上數位轉型的迫切吧，有些老店紛紛導入數位會員制與線上訂餐，一整個現代了起來，但不知道是不是賣給它們這套系統的Oxxard業務沒有教好它們要怎麼用，於是發生一些良心被譴責但又覺得好爽的事情
+
+新會員見面禮很常見吧，通常都是一些不痛不癢的東西，什麼9折阿，送小菜之類的，但不知道這家老店是發了什麼瘋，直接送等值一百元的抵用券，哇爽爆了，要知道一個今日便當才99元，而且該店也算是當地的名店，便當不錯吃，店員熱情的招呼我們說加會員送100元，本來還想說一定會有什麼限制吧，結果真的是送一百元，不僅不用加錢超過面額，也沒有任何附加條件，如果你買99元的今日便當，等於**免費**送便當，好，好喔，更奇妙的還是後頭，這個**新會員**見面禮居然是**一個月送一張**的，握草，一個月送你一百元的店家，吃爆，吃了幾個月店員都認出來了，但每個月都用**新會員見面禮**，店員真的不覺得奇怪嗎.....
+
+### 檢查是否已經發給過優惠券
+
+加入一個新函數QUY_CPN(self, id, cptype)，查詢該類型的優惠券列表
+
+```python
+def QUY_CPN(self, id, cptype):
+    cur = self.conn.cursor()
+    query = sql.SQL("SELECT * from coupon WHERE %s = ANY (userids) and type = %s").format(sql.Identifier('coupon'))
+    cur.execute(query, (id, cptype))
+    r = cur.fetchall()
+    cur.close()
+    return r
+```
+
+修改FollowEventHandler
+
+```python
+def timedelta_bydays(self, days=7):
+    s_time = datetime.now().isoformat()
+    e_time = (datetime.now() + timedelta(days=days)).isoformat()
+    return s_time, e_time
+
+def gencode(self, mode=0):
+    import string, random
+    if(mode == 0):
+        return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(8))
+
+def INS_CPN(self, id, cptype):
+    if(cptype == "new" or cptype == "back"):
+        code = self.gencode()
+        s_time, e_time = self.timedelta_bydays(days=7)
+        cur = self.conn.cursor()
+        id = '{' + id + '}'
+        query = sql.SQL("INSERT INTO {}(type, code, s_time, e_time, times, userids) VALUES (%s, %s, %s, %s, %s, %s);").format(sql.Identifier('coupon'))
+        cur.execute(query, (cptype, code, s_time, e_time, str(1), id))
+        self.conn.commit()
+        cur.close()
+        return 1, code
+    else:
+        print()
+        return 0, "placeholder Due no coupon"
+
+@handler.add(FollowEvent)
+def handle_follow(event):
+  prof = line_bot_api.get_profile(event.source.user_id)
+  r = dbpm.INS_UPD_cus(prof)
+  if r == 1:
+      msg = "Hello 歡迎鐵人賽的勇者"
+      cpl = dbpm.QUY_CPN(event.source.user_id, "new")
+      if(cpl and len(cpl) > 0):
+          app.logger.debug(f"已經發過優惠券:{cpl}")
+      else:
+          cr, code = dbpm.INS_CPN(event.source.user_id, "new")
+          if(cr == 1):
+              msg = msg + f"\n這是您的好友見面禮:{code}"
+  else:
+      msg = "Hello 歡迎鐵人賽的勇者回來"
+      cpl = dbpm.QUY_CPN(event.source.user_id, "back")
+      if(cpl and len(cpl) > 0):
+          app.logger.debug(f"已經發過優惠券:{cpl}")
+      else:
+          cr, code = dbpm.INS_CPN(event.source.user_id, "back")
+          if(cr == 1):
+              msg = msg + f"\n這是您的回歸小禮物:{code}"
+  
+  line_bot_api.reply_message(
+      event.reply_token,
+      TextSendMessage(text=msg))
+```
+
+![大大大優惠](readme/d19-01.png)
+
+等眼睛好一點，趕快寫完訂單頁面.....
+
+## [day20]談購物流程設計
+
+本來想除了管理功能外全部都在Line介面裡面解決，但做了一陣子覺得越想越不對勁，重新考量了一下思路，所以今天鴿了，說是這麼說，但還是拉了幾個表格，分別是產品(products)、購物車(shopping_cart)、購物車明細(cart_items)，說一下現在的流程想法
+
+```sql
+CREATE TABLE IF NOT EXISTS public.shopping_cart
+(
+    scid bigint NOT NULL DEFAULT nextval('shopping_cart_scid_seq'::regclass),
+    uid text COLLATE pg_catalog."default" NOT NULL,
+    createddate timestamp with time zone,
+    CONSTRAINT shopping_cart_pkey PRIMARY KEY (scid),
+    CONSTRAINT uid FOREIGN KEY (uid)
+        REFERENCES public.customers (uid) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+
+CREATE TABLE IF NOT EXISTS public.cart_items
+(
+    id bigint NOT NULL DEFAULT nextval('cart_items_id_seq'::regclass),
+    scid bigint NOT NULL,
+    productid integer,
+    quantity integer,
+    CONSTRAINT cart_items_pkey PRIMARY KEY (id),
+    CONSTRAINT pid FOREIGN KEY (productid)
+        REFERENCES public.products (pid) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+        NOT VALID,
+    CONSTRAINT scid FOREIGN KEY (scid)
+        REFERENCES public.shopping_cart (scid) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+
+CREATE TABLE IF NOT EXISTS public.products
+(
+    pid integer NOT NULL DEFAULT nextval('products_pid_seq'::regclass),
+    product_name text COLLATE pg_catalog."default" NOT NULL,
+    quantity integer NOT NULL,
+    product_decp text COLLATE pg_catalog."default",
+    createddate timestamp with time zone,
+    expireddate timestamp with time zone,
+    CONSTRAINT products_pkey PRIMARY KEY (pid)
+)
+
+CREATE TABLE IF NOT EXISTS public.orders
+(
+    oid bigint NOT NULL DEFAULT nextval('orders_oid_seq'::regclass),
+    uid text COLLATE pg_catalog."default" NOT NULL,
+    scid bigint NOT NULL,
+    createddate timestamp with time zone,
+    paid bigint NOT NULL,
+    ostatus integer NOT NULL DEFAULT 0,
+    CONSTRAINT orders_pkey PRIMARY KEY (oid),
+    CONSTRAINT paid FOREIGN KEY (paid)
+        REFERENCES public.payment_log (paid) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+        NOT VALID,
+    CONSTRAINT scid FOREIGN KEY (scid)
+        REFERENCES public.shopping_cart (scid) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT uid FOREIGN KEY (uid)
+        REFERENCES public.customers (uid) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+
+CREATE TABLE IF NOT EXISTS public.payment_log
+(
+    paid bigint NOT NULL DEFAULT nextval('payment_log_paid_seq'::regclass),
+    type text COLLATE pg_catalog."default",
+    ispaid boolean DEFAULT false,
+    CONSTRAINT payment_log_pkey PRIMARY KEY (paid)
+)
+```
+
+### 建立訂單資料庫流程
+
+1. 建立購物車shopping_cart紀錄
+2. 依據products內產品類別、庫存加入購物車紀錄到cart_items
+3. 使用者點選建立訂單時，payment_log建立付款紀錄
+4. 付款成功後，訂單所消耗的庫存反映到products
+5. 變更orders訂單狀態為待出貨
+6. 出貨後變更訂單狀態為已出貨
+7. 下次使用者進行新增購物車時，分配一個新的購物車
+
+原本想說購物車與購物明細放同一個表格，但實作到一半測試起來礙手礙腳，要檢索內容，再更新，於是拉倒重新設計資料庫，改為一個購物車ID，再用這個購物車ID連結購物車明細表格，這樣購物車的內容與購物車本身分開紀錄，更容易修改內容，訂單與付款紀錄也是差不多的原因拆成兩半，今天先把大致上的流程盤點一遍確認，之後再滾動修正0rz
