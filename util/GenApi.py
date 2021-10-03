@@ -121,6 +121,14 @@ def GetNonce(cfg):
     resp = APIPm.sendreq(url=cfg.Nonce_URL, data=payload)
     return json.loads(resp.text)['Nonce']
 
+def OrderPayQuery(ShopNo=os.environ['ShopNo'], PayToken=None):
+    if(not ShopNo or not PayToken):return None
+    payload = json.dumps({"ShopNo":ShopNo, "PayToken":PayToken}, indent=4)
+    resp = APIPm.sendreq(url=cfg.Api_URL, data=payload)
+    resp = json.loads(resp.text)
+    print(resp)
+    return resp
+
 if __name__ == '__main__':
     # env = ConfigParser()
     # env.read('env.ini')

@@ -17,8 +17,9 @@ import os
 from linebot.models.events import FollowEvent
 import psycopg2
 import pytz
-import util.dbcc as dbcc
+
 import util.dbPm as dbPm
+import util.GenApi as FunBizApi
 
 app = Flask(__name__)
 api = Api(app)
@@ -101,12 +102,17 @@ def funBIZ_route():
     app.logger.debug(f"content:{content}")
     return jsonify({'Status':'S'})
 
-@app.route('/order-summary')
+@app.route('/order-summary', methods=['POST'])
 def order_summary_route():
     app.logger.debug(f"headers:{dict(request.headers)}")
     content = request.json
     app.logger.debug(f"content:{content}")
-    return jsonify({'order-summary':'S'})
+    if(content['ShopNo'] == os.environ['ShopNo']):
+        resp = FunBizApi.OrderPayQuery(PayToken=content['PayToken'])
+        app.logger.debug(f"OrderPayQuery:{resp}")
+        return jsonify({'order-summary':'S'})
+    else:
+        return jsonify({'order-summary':'F'})
 
 @app.route("/dbstatus", methods=['GET'])
 def DBversion():
