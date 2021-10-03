@@ -112,6 +112,9 @@ def order_summary_route():
     app.logger.debug(f"headers:{dict(request.headers)}")
     content = request.form
     app.logger.debug(f"content:{content}")
+    if(content.get('ShopNo') == os.environ['ShopNo']):
+        resp = FunBizApi.OrderPayQuery(PayToken=content.get('PayToken'))
+        app.logger.debug(f"OrderPayQuery:{resp}")
     return jsonify({'order-summary':'S'})
 
 
