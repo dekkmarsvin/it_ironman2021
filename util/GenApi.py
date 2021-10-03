@@ -133,7 +133,6 @@ def OrderPayQuery(ShopNo=os.environ['ShopNo'], PayToken=None):
     iv = GenIV(nonce)
     emsg = AES_CBC_Encrpt(cfg.HashID, iv, msg)
     payload = GenRequest(cfg, "OrderPayQuery", sign, nonce, emsg)
-    print(payload)
     resp = APIPm.sendreq(url=cfg.Api_URL, data=payload)
     funbiz_msg = Response_Decrypt(resp, cfg.HashID)
     return funbiz_msg
