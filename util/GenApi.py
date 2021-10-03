@@ -135,7 +135,7 @@ if __name__ == '__main__':
     Hash = SimpleNamespace(A1 = os.environ['A1'], A2 = os.environ['A2'], B1 = os.environ['B1'], B2 = os.environ['B2'])
     cfg = SimpleNamespace(Version = os.environ ['Version'], ShopNo = os.environ['ShopNo'], HashID = HashID(Hash), \
                          Api_URL = os.environ['Api_URL'], Nonce_URL = os.environ['Nonce_URL'], BackendURL = os.environ['BackendURL'], \
-                        ReturnURL = os.os.environ['ReturnURL'])
+                        ReturnURL = os.environ['ReturnURL'])
 
     neworder = APIModel.ReqOrderCreate(ShopNo="NA0249_001", OrderNo="2021091500002", Amount=40400, \
                 PrdtName="IPhone 13 Pro Max 256g", ReturnURL=cfg.ReturnURL, \
