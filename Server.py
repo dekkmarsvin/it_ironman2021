@@ -97,9 +97,9 @@ def default_route():
 
 @app.route('/funBIZ_backend', methods=['POST'])
 def funBIZ_route():
-    app.logger.debug(f"headers:{dict(request.headers)}")
+    # app.logger.debug(f"headers:{dict(request.headers)}")
     content = request.json
-    app.logger.debug(f"content:{content}")
+    # app.logger.debug(f"content:{content}")
     if(content['ShopNo'] == os.environ['ShopNo']):
         resp = FunBizApi.OrderPayQuery(PayToken=content['PayToken'])
         app.logger.debug(f"OrderPayQuery:{resp}")

@@ -163,7 +163,7 @@ if __name__ == '__main__':
                          Api_URL = os.environ['Api_URL'], Nonce_URL = os.environ['Nonce_URL'], BackendURL = os.environ['BackendURL'], \
                         ReturnURL = os.environ['ReturnURL'])
 
-    neworder = APIModel.ReqOrderCreate(ShopNo="NA0249_001", OrderNo="2021100300002", Amount=40400, \
+    neworder = APIModel.ReqOrderCreate(ShopNo="NA0249_001", OrderNo="2021100400003", Amount=40400, \
                 PrdtName="IPhone 13 Pro Max 256g", ReturnURL=cfg.ReturnURL, \
                     BackendURL=cfg.BackendURL, PayType="C", AutoBilling="Y", PayTypeSub="ONE")
     msg, OK = OrderCreate(neworder, cfg)
