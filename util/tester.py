@@ -33,8 +33,8 @@ def doinit(dbpm:DBPm, args):
 def loadargs():
     parser = argparse.ArgumentParser()
     
-    subparsers = parser.add_subparsers(title='資料庫控制', description='呼叫資料庫命令')
-    init = subparsers.add_parser('init', dest='subparser_name')
+    subparsers = parser.add_subparsers(title='資料庫控制', description='呼叫資料庫命令', dest='subparser_name')
+    init = subparsers.add_parser('init')
     init.add_argument('target', choices=dblist, help='初始化資料庫目標')
     init.add_argument('-y', '--yes', action='store_true', help='確認執行')
     init.set_defaults(func = doinit)
