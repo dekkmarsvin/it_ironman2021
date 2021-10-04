@@ -92,6 +92,7 @@
     - [大BUG?](#大bug)
     - [訊息查詢服務OrderPayQuery服務說明](#訊息查詢服務orderpayquery服務說明)
     - [實作接收PayToken並查詢狀態](#實作接收paytoken並查詢狀態)
+  - [[day22] 將商品加入購物車](#day22-將商品加入購物車)
 
 ## [Day1] 金融支付API
 
@@ -2125,3 +2126,5 @@ def order_summary_route():
 ```
 
 今天完成接收付款並複查付款資訊功能，明天準備整合進資料庫紀錄
+
+## [day22] 將商品加入購物車

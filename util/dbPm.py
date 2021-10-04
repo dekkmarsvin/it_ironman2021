@@ -91,3 +91,12 @@ class DBPm:
         import string, random
         if(mode == 0):
             return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(8))
+
+    def INS_Prod_Cat(self, category_name, category_decp):
+        cur = self.conn.cursor()
+        query = sql.SQL("INSERT INTO {}(category, category_decp) VALUES (%s, %s)").format(sql.Identifier('product_category'))
+        cur.execute(query, (category_name, category_decp))
+        (rows,) = cur.fetchone()
+        print(f"{rows} been INSERT")
+        self.conn.commit()
+        cur.close()
