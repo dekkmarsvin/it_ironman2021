@@ -58,7 +58,6 @@ def init_products(dbpm:DBPm, yes=False):
     return True
 
 def add_product_category(dbpm:DBPm, yes=False):
-    print("add_product_category手動新增商品類別")
     try:
         cate = input("商品類別:")
         decp = input("商品類別說明:")
@@ -71,15 +70,14 @@ def add_product_category(dbpm:DBPm, yes=False):
     return True
 
 def add_products(dbpm:DBPm, yes=False):
-    print("add_products手動新增商品")
     try:
         p_name = input("商品:")
         p_quantity = input("商品庫存:")
         p_decp = input("商品說明:")
-        daydiff = input("剩餘有效天數:")
+        daydiff = int(input("剩餘有效天數:"))
         p_st, p_et = dbpm.timedelta_bydays(days=daydiff)
         p_cate = input("商品類別:")
-        p_price = input("價格:")
+        p_price = int(input("價格:"))
         if(not yes):yes = askyes()
         if(not yes):return False
         dbpm.INS_Prod(p_name, p_quantity, p_decp, p_st, p_et, p_cate, p_price)
