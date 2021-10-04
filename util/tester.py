@@ -24,6 +24,7 @@ def init_product_category(dbpm:DBPm, yes=False):
             dbpm.INS_Prod_Cat(dc, de)
         except Exception as Err:
             print(Err)
+            return False
     return True
 
 def init_products(dbpm:DBPm, yes=False):
@@ -53,6 +54,38 @@ def init_products(dbpm:DBPm, yes=False):
             dbpm.INS_Prod(dp, dq, de, dst, det, drink_product_cate, dpi)
         except Exception as Err:
             print(Err)
+            return False
+    return True
+
+def add_product_category(dbpm:DBPm, yes=False):
+    print("add_product_category手動新增商品類別")
+    try:
+        cate = input("商品類別:")
+        decp = input("商品類別說明:")
+        if(not yes):yes = askyes()
+        if(not yes):return False
+        dbpm.INS_Prod_Cat(cate, decp)
+    except Exception as Err:
+        print(Err)
+        return False
+    return True
+
+def add_products(dbpm:DBPm, yes=False):
+    print("add_products手動新增商品")
+    try:
+        p_name = input("商品:")
+        p_quantity = input("商品庫存:")
+        p_decp = input("商品說明:")
+        daydiff = input("剩餘有效天數:")
+        p_st, p_et = dbpm.timedelta_bydays(days=daydiff)
+        p_cate = input("商品類別:")
+        p_price = input("價格:")
+        if(not yes):yes = askyes()
+        if(not yes):return False
+        dbpm.INS_Prod(p_name, p_quantity, p_decp, p_st, p_et, p_cate, p_price)
+    except Exception as Err:
+        print(Err)
+        return False
     return True
 
 def doinit(dbpm:DBPm, args):
@@ -67,10 +100,22 @@ def doinit(dbpm:DBPm, args):
     if(r):print("成功")
     else:print("失敗")
 
+def doadd(dbpm:DBPm, args):
+    r = False
+    if(args.target == 'product_category'):
+        print("插入product_category測試資料")
+        r = init_product_category(dbpm=dbpm, yes=args.yes)
+    elif(args.target == 'products'):
+        print("插入products測試資料")
+        r = init_products(dbpm=dbpm, yes=args.yes)
+    if(r):print("成功")
+    else:print("失敗")
+
 def loadargs():
     parser = argparse.ArgumentParser()
     
     subparsers = parser.add_subparsers(title='資料庫控制', description='呼叫資料庫命令', dest='subparser_name')
+
     init = subparsers.add_parser('init')
     init.add_argument('target', choices=dblist, help='初始化資料庫目標')
     init.add_argument('-y', '--yes', action='store_true', help='確認執行')
@@ -78,6 +123,8 @@ def loadargs():
 
     add = subparsers.add_parser('add')
     add.add_argument('target', choices=dblist, help='新增紀錄')
+    add.add_argument('-y', '--yes', action='store_true', help='確認執行')
+    add.set_defaults(func = doadd)
     return parser.parse_args()
 
 args = loadargs()
