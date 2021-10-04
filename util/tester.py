@@ -9,7 +9,7 @@ def askyes():
     else:return False
 
 def init_product_category(dbpm:DBPm, yes=False):
-    if(not yes):yes = askyes
+    if(not yes):yes = askyes()
     if(not yes):return False
 
     drink_cate = ['酒','茶','果汁','碳酸飲料','咖啡','其他']
@@ -26,10 +26,45 @@ def init_product_category(dbpm:DBPm, yes=False):
             print(Err)
     return True
 
+def init_products(dbpm:DBPm, yes=False):
+    if(not yes):yes = askyes()
+    if(not yes):return False
+
+    drink_products = ['可口可樂Zero易開罐330ml(24入)', '可口可樂-易開罐330ml (24入/箱)', '【味丹】激浪汽水-冰晶檸檬風味', '七喜汽水330ml(24入)', '百事可樂 250ml(24入)']
+    drink_quantity = [99,98,97,96,95]
+    drink_product_decp = ['此品新舊包裝隨機出貨，如可接受再購買', '新舊包裝隨機出貨，如可接受再購買', '清爽透明系 減糖少負擔\n清新檸檬萊姆風味\n順暢氣泡 瞬間振奮', \
+                        '★清涼暢快\n★檸檬口味', '★Dare for more\n★渴望、探索、創造']
+    drink_product_s_time = []
+    drink_product_e_time = []
+    for i in range(len(drink_products)):
+        if(i<=1):
+            st, et = dbpm.timedelta_bydays()
+            drink_product_s_time.append(st)
+            drink_product_e_time.append(et)
+        else:
+            st, et = dbpm.timedelta_bydays(days=730)
+            drink_product_s_time.append(st)
+            drink_product_e_time.append(et)
+    drink_product_cate = '碳酸飲料'
+    drink_product_price = [288, 288, 519, 309, 249]
+
+    for dp,dq,de,dst,det,dpi in zip(drink_products, drink_quantity, drink_product_decp, drink_product_s_time, drink_product_e_time, drink_product_price):
+        try:
+            dbpm.INS_Prod(dp, dq, de, dst, det, drink_product_cate, dpi)
+        except Exception as Err:
+            print(Err)
+    return True
+
 def doinit(dbpm:DBPm, args):
     if(args.target == 'product_category'):
         print("插入product_category測試資料")
-        init_product_category(dbpm=dbpm, yes=args.yes)
+        r = init_product_category(dbpm=dbpm, yes=args.yes)
+    elif(args.target == 'products'):
+        print("插入products測試資料")
+        init_products(dbpm=dbpm, yes=args.yes)
+
+    if(r):print("成功")
+    else:print("失敗")
 
 def loadargs():
     parser = argparse.ArgumentParser()
