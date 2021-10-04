@@ -1,6 +1,5 @@
 import argparse
-from os import truncate
-from util.dbPm import DBPm
+from dbPm import DBPm
 
 dblist = ['cart_items', 'coupon', 'customers', 'messaging_log', 'orders', 'payment_log', 'product_category', 'products', 'shopping_cart']
 
@@ -27,13 +26,18 @@ def init_product_category(dbpm:DBPm, yes=False):
             print(Err)
     return True
 
+def doinit(dbpm:DBPm, args):
+    if(args.target == 'product_category'):
+        init_product_category(yes=args.yes)
+
 def loadargs():
     parser = argparse.ArgumentParser()
     
     subparsers = parser.add_subparsers(title='資料庫控制', description='呼叫資料庫命令')
-    init = subparsers.add_parser('init')
+    init = subparsers.add_parser('init', dest='subparser_name')
     init.add_argument('target', choices=dblist, help='初始化資料庫目標')
     init.add_argument('-y', '--yes', action='store_true', help='確認執行')
+    init.set_defaults(func = doinit)
 
     add = subparsers.add_parser('add')
     add.add_argument('target', choices=dblist, help='新增紀錄')
@@ -43,3 +47,4 @@ if __name__ == '__main__':
     args = loadargs()
     dbpm = DBPm()
     print(args)
+    args.func(args)
