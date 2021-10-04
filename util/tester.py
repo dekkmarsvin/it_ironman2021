@@ -46,4 +46,4 @@ def loadargs():
 args = loadargs()
 dbpm = DBPm()
 print(args)
-args.func(args)
+args.func(dbpm, args)
