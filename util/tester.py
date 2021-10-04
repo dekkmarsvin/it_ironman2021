@@ -28,7 +28,8 @@ def init_product_category(dbpm:DBPm, yes=False):
 
 def doinit(dbpm:DBPm, args):
     if(args.target == 'product_category'):
-        init_product_category(yes=args.yes)
+        print("插入product_category測試資料")
+        init_product_category(dbpm=dbpm, yes=args.yes)
 
 def loadargs():
     parser = argparse.ArgumentParser()
