@@ -56,12 +56,13 @@ def init_products(dbpm:DBPm, yes=False):
     return True
 
 def doinit(dbpm:DBPm, args):
+    r = False
     if(args.target == 'product_category'):
         print("插入product_category測試資料")
         r = init_product_category(dbpm=dbpm, yes=args.yes)
     elif(args.target == 'products'):
         print("插入products測試資料")
-        init_products(dbpm=dbpm, yes=args.yes)
+        r = init_products(dbpm=dbpm, yes=args.yes)
 
     if(r):print("成功")
     else:print("失敗")
