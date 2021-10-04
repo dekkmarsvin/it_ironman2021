@@ -97,7 +97,7 @@ class DBPm:
         query = sql.SQL("INSERT INTO {}(category, category_decp) VALUES (%s, %s)").format(sql.Identifier('product_category'))
         cur.execute(query, (category_name, category_decp))
         cur_stat = cur.statusmessage
-        print(f"{cur_stat}")
+        # print(f"{cur_stat}")
         self.conn.commit()
         cur.close()
 
@@ -106,6 +106,6 @@ class DBPm:
         query = sql.SQL("INSERT INTO {}(product_name, quantity, product_decp, createddate, expireddate, category, price) VALUES (%s, %s, %s, %s, %s, %s, %s)").format(sql.Identifier('products'))
         cur.execute(query, (product_name, quantity, product_decp, createddate, expireddate, category, price))
         cur_stat = cur.statusmessage
-        print(f"{cur_stat}")
+        # print(f"{cur_stat}")
         self.conn.commit()
         cur.close()
