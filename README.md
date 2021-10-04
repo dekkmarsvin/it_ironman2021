@@ -92,7 +92,9 @@
     - [大BUG?](#大bug)
     - [訊息查詢服務OrderPayQuery服務說明](#訊息查詢服務orderpayquery服務說明)
     - [實作接收PayToken並查詢狀態](#實作接收paytoken並查詢狀態)
-  - [[day22] 將商品加入購物車](#day22-將商品加入購物車)
+  - [[day22] 快速產生測試資料](#day22-快速產生測試資料)
+    - [插入測資功能敘述](#插入測資功能敘述)
+    - [實作簡易的測資插入功能](#實作簡易的測資插入功能)
 
 ## [Day1] 金融支付API
 
@@ -2127,4 +2129,153 @@ def order_summary_route():
 
 今天完成接收付款並複查付款資訊功能，明天準備整合進資料庫紀錄
 
-## [day22] 將商品加入購物車
+## [day22] 快速產生測試資料
+
+功能測試時很常需要刪掉壞掉的資料庫紀錄，這時就需要重置測資，但每次都開管理工具來做太麻煩了，寫個小工具產生好了
+
+### 插入測資功能敘述
+
+自動插入
+
+1. 6種商品類別
+2. 插入5種商品
+
+手動插入
+
+1. 商品類別
+2. 商品
+
+### 實作簡易的測資插入功能
+
+加入命令列argparse分類
+
+```python
+dblist = ['cart_items', 'coupon', 'customers', 'messaging_log', 'orders', 'payment_log', 'product_category', 'products', 'shopping_cart']
+
+def askyes():
+    val = input("Confirm to Do(Y/N):").lower()
+    if(val == 'y' or val == 'yes'):return True
+    else:return False
+
+def loadargs():
+    parser = argparse.ArgumentParser()
+    
+    subparsers = parser.add_subparsers(title='資料庫控制', description='呼叫資料庫命令', dest='subparser_name')
+
+    init = subparsers.add_parser('init')
+    init.add_argument('target', choices=dblist, help='初始化資料庫目標')
+    init.add_argument('-y', '--yes', action='store_true', help='確認執行')
+    init.set_defaults(func = doinit)
+
+    add = subparsers.add_parser('add')
+    add.add_argument('target', choices=dblist, help='新增紀錄')
+    add.add_argument('-y', '--yes', action='store_true', help='確認執行')
+    add.set_defaults(func = doadd)
+    return parser.parse_args()
+
+args = loadargs()
+dbpm = DBPm()
+print(args)
+args.func(dbpm, args)
+```
+
+init sub argparse
+
+```python
+def init_product_category(dbpm:DBPm, yes=False):
+    if(not yes):yes = askyes()
+    if(not yes):return False
+
+    drink_cate = ['酒','茶','果汁','碳酸飲料','咖啡','其他']
+    drink_decp = ['酒（英語：Alcoholic beverage），其中含有0.5%至96%的酒精（即乙醇）。為人類飲用歷史最長的加工飲品之一，由植物發酵製成。', \
+                '茶，是指利用茶樹的葉子所加工製成的飲料，多烹[3]成茶湯飲用，也可以加入食物中調味，也可入中藥使用。[4]現代的茶按製作工序主要分爲六大類，綠茶、白茶、黃茶、青茶、紅茶、黑茶[5]。茶大多種植在梯田(為了灌溉方便)。', \
+                '蔬果汁，常簡稱果汁，是指從新鮮水果或蔬菜榨汁而成的一種飲料。', \
+                '碳酸飲料又稱汽水，是充入二氧化碳氣體的軟性飲料，其中包括日常汽水，如七喜、可樂、碳酸水及沙士、麥根沙士雪碧等。', \
+                '咖啡（英語：coffee）是采經過烘焙過程的咖啡豆（咖啡屬植物的種子）所製作沖泡的飲料。', \
+                '如牛奶、豆漿、蜂蜜水、氣泡水、運動飲料等.....']
+    for dc, de in zip(drink_cate, drink_decp):
+        try:
+            dbpm.INS_Prod_Cat(dc, de)
+        except Exception as Err:
+            print(Err)
+            return False
+    return True
+
+def init_products(dbpm:DBPm, yes=False):
+    if(not yes):yes = askyes()
+    if(not yes):return False
+
+    drink_products = ['可口可樂Zero易開罐330ml(24入)', '可口可樂-易開罐330ml (24入/箱)', '【味丹】激浪汽水-冰晶檸檬風味', '七喜汽水330ml(24入)', '百事可樂 250ml(24入)']
+    drink_quantity = [99,98,97,96,95]
+    drink_product_decp = ['此品新舊包裝隨機出貨，如可接受再購買', '新舊包裝隨機出貨，如可接受再購買', '清爽透明系 減糖少負擔\n清新檸檬萊姆風味\n順暢氣泡 瞬間振奮', \
+                        '★清涼暢快\n★檸檬口味', '★Dare for more\n★渴望、探索、創造']
+    drink_product_s_time = []
+    drink_product_e_time = []
+    for i in range(len(drink_products)):
+        if(i<=1):
+            st, et = dbpm.timedelta_bydays()
+            drink_product_s_time.append(st)
+            drink_product_e_time.append(et)
+        else:
+            st, et = dbpm.timedelta_bydays(days=730)
+            drink_product_s_time.append(st)
+            drink_product_e_time.append(et)
+    drink_product_cate = '碳酸飲料'
+    drink_product_price = [288, 288, 519, 309, 249]
+
+    for dp,dq,de,dst,det,dpi in zip(drink_products, drink_quantity, drink_product_decp, drink_product_s_time, drink_product_e_time, drink_product_price):
+        try:
+            dbpm.INS_Prod(dp, dq, de, dst, det, drink_product_cate, dpi)
+        except Exception as Err:
+            print(Err)
+            return False
+    return True
+
+def doinit(dbpm:DBPm, args):
+    r = False
+    if(args.target == 'product_category'):
+        print("插入product_category測試資料")
+        r = init_product_category(dbpm=dbpm, yes=args.yes)
+    elif(args.target == 'products'):
+        print("插入products測試資料")
+        r = init_products(dbpm=dbpm, yes=args.yes)
+
+    if(r):print("成功")
+    else:print("失敗")
+```
+
+手動插入
+
+```python
+def add_product_category(dbpm:DBPm, yes=False):
+    try:
+        cate = input("商品類別:")
+        decp = input("商品類別說明:")
+        if(not yes):yes = askyes()
+        if(not yes):return False
+        dbpm.INS_Prod_Cat(cate, decp)
+    except Exception as Err:
+        print(Err)
+        return False
+    return True
+
+def add_products(dbpm:DBPm, yes=False):
+    try:
+        p_name = input("商品:")
+        p_quantity = input("商品庫存:")
+        p_decp = input("商品說明:")
+        daydiff = int(input("剩餘有效天數:"))
+        p_st, p_et = dbpm.timedelta_bydays(days=daydiff)
+        p_cate = input("商品類別:")
+        p_price = int(input("價格:"))
+        if(not yes):yes = askyes()
+        if(not yes):return False
+        dbpm.INS_Prod(p_name, p_quantity, p_decp, p_st, p_et, p_cate, p_price)
+    except Exception as Err:
+        print(Err)
+        return False
+    return True
+```
+
+接下來幾天會在調整一下，把加入購物車/庫存連動作出來
+
