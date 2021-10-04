@@ -96,7 +96,7 @@ class DBPm:
         cur = self.conn.cursor()
         query = sql.SQL("INSERT INTO {}(category, category_decp) VALUES (%s, %s)").format(sql.Identifier('product_category'))
         cur.execute(query, (category_name, category_decp))
-        (rows,) = cur.fetchone()
-        print(f"{rows} been INSERT")
+        cur_stat = cur.statusmessage
+        print(f"{cur_stat} been INSERT")
         self.conn.commit()
         cur.close()
