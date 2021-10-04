@@ -103,11 +103,11 @@ def doinit(dbpm:DBPm, args):
 def doadd(dbpm:DBPm, args):
     r = False
     if(args.target == 'product_category'):
-        print("插入product_category測試資料")
-        r = init_product_category(dbpm=dbpm, yes=args.yes)
+        print("手動插入product_category資料")
+        r = add_product_category(dbpm=dbpm, yes=args.yes)
     elif(args.target == 'products'):
-        print("插入products測試資料")
-        r = init_products(dbpm=dbpm, yes=args.yes)
+        print("手動插入products資料")
+        r = add_products(dbpm=dbpm, yes=args.yes)
     if(r):print("成功")
     else:print("失敗")
 
