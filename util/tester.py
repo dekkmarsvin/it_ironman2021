@@ -43,8 +43,7 @@ def loadargs():
     add.add_argument('target', choices=dblist, help='新增紀錄')
     return parser.parse_args()
 
-if __name__ == '__main__':
-    args = loadargs()
-    dbpm = DBPm()
-    print(args)
-    args.func(args)
+args = loadargs()
+dbpm = DBPm()
+print(args)
+args.func(args)
