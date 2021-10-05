@@ -95,6 +95,10 @@
   - [[day22] 快速產生測試資料](#day22-快速產生測試資料)
     - [插入測資功能敘述](#插入測資功能敘述)
     - [實作簡易的測資插入功能](#實作簡易的測資插入功能)
+  - [[day23]加入購物車 & 庫存檢查](#day23加入購物車--庫存檢查)
+    - [實作購物車產生與庫存檢查](#實作購物車產生與庫存檢查)
+      - [cursor.execute() 單參數時錯誤](#cursorexecute-單參數時錯誤)
+    - [執行結果](#執行結果)
 
 ## [Day1] 金融支付API
 
@@ -2279,3 +2283,183 @@ def add_products(dbpm:DBPm, yes=False):
 
 接下來幾天會在調整一下，把加入購物車/庫存連動作出來
 
+## [day23]加入購物車 & 庫存檢查
+
+簡單設計一個庫存與訂單設計，用白話一點來說就是推一台購物車，購物車上可以放上各種商品，推去結帳時這台購物車就被鎖定了，使用者下次購物需要推另一台購物車
+
+程式流程:
+
+1. 產生購物車編號
+2. 檢查商品庫存，庫存>=0時允許綁定商品至購物車編號
+
+### 實作購物車產生與庫存檢查
+
+一樣先做測試用的tester.yp，之後再把介面接到前端
+
+修改doinit與doadd兩個功能決定函式，加入init_add_test_items_to_shopping_cart_via_lineuid跟add_shopping_cart
+
+```python
+# tester.py
+def doinit(dbpm:DBPm, args):
+    r = False
+    if(args.target == 'product_category'):
+        print("插入product_category測試資料")
+        r = init_product_category(dbpm=dbpm, yes=args.yes)
+    elif(args.target == 'products'):
+        print("插入products測試資料")
+        r = init_products(dbpm=dbpm, yes=args.yes)
+    elif(args.target == 'cart_items' or args.target == 'shopping_cart'):
+        print("插入購物車 & 插入購物車項目")
+        r = init_add_test_items_to_shopping_cart_via_lineuid(dbpm=dbpm, yes=args.yes)
+    if(r):print("成功")
+    else:print("失敗")
+
+def doadd(dbpm:DBPm, args):
+    r = False
+    if(args.target == 'product_category'):
+        print("手動插入product_category資料")
+        r = add_product_category(dbpm=dbpm, yes=args.yes)
+    elif(args.target == 'products'):
+        print("手動插入products資料")
+        r = add_products(dbpm=dbpm, yes=args.yes)
+    elif(args.target == 'shopping_cart'):
+        print("手動插入購物車shopping_cart")
+        r = add_shopping_cart(dbpm=dbpm, yes=args.yes)
+    if(r):print("成功")
+    else:print("失敗")
+```
+
+實作插入紀錄
+
+```python
+def add_shopping_cart(dbpm:DBPm, id=os.environ['Me'], yes=False):
+    try:
+        id = input(f"輸入Line UID({id}):") or id
+        scid = dbpm.INS_QUY_SC(id)
+        print(f"購物車ID:{scid}")
+        if(not yes):yes = askyes()
+        if(not yes):return False
+    except Exception as err:
+        print(err)
+        return False
+    return True
+
+def init_add_test_items_to_shopping_cart_via_lineuid(dbpm:DBPm, id=os.environ['Me'], yes=False):
+    if(not yes):yes = askyes()
+    if(not yes):return False
+
+    # 購買第21、23、25號商品3、999、9個品項
+    cart_item_pid = [21, 23, 25]
+    cart_item_qut = [3, 999, 9]
+
+    try:
+        print(f"line id:{id}")
+        scid = dbpm.INS_QUY_SC(id)
+        for cp, cq in zip(cart_item_pid, cart_item_qut):
+            current_product_stocks = dbpm.QUY_Prod_Quantity_by_pid(cp)
+            print(f"產品{cp}, 庫存:{current_product_stocks}")
+            if(current_product_stocks - cq >= 0):
+                print(f"INS, {cp} x {cq} to cart:{scid}")
+                dbpm.INS_Prod_to_Cart(scid, cp, cq)
+            else:
+                print("庫存不足")
+    except Exception as err:
+        print(err)
+        return False
+    return True
+```
+
+資料庫控制:
+
+```python
+# 返回購物車編號
+def INS_QUY_SC(self, id):
+    #先檢查是否有存在的可用購物車
+
+    cur = self.conn.cursor()
+    query = sql.SQL("SELECT scid FROM {} WHERE uid = %s and lock = false LIMIT 1").format(sql.Identifier('shopping_cart'))
+    cur.execute(query, (id,))
+    scid = cur.fetchone()
+    cur.close()
+    print(f"scid-quy:{scid}")
+
+    if(not scid):
+        ct = datetime.now().isoformat()
+        cur = self.conn.cursor()
+        query = sql.SQL("INSERT INTO {}(uid, createddate) VALUES (%s, %s) RETURNING scid").format(sql.Identifier('shopping_cart'))
+        cur.execute(query, (id, ct))
+        scid = cur.fetchone()
+        print(f"scid-ins:{scid}")
+        self.conn.commit()
+        cur.close()
+    return scid[0]
+
+# 返回庫存
+def QUY_Prod_Quantity_by_pid(self, pid):
+    cur = self.conn.cursor()
+    query = sql.SQL("select quantity from {} where pid = %s").format(sql.Identifier('products'))
+    cur.execute(query, (pid,))
+    qt = cur.fetchone()
+    cur.close()
+    if(qt):
+        return qt[0]
+    return None
+
+# 將商品加入購物車
+def INS_Prod_to_Cart(self, scid, pid, quantity):
+    cur = self.conn.cursor()
+    query = sql.SQL("SELECT quantity from {} where scid = %s and productid = %s").format(sql.Identifier('cart_items'))
+    cur.execute(query, (scid, pid))
+    qt = cur.fetchone()
+    cur.close()
+    if(qt):
+        qt = qt[0] + quantity
+        cur = self.conn.cursor()
+        query = sql.SQL("UPDATE {} SET quantity=%s WHERE scid = %s and productid = %s").format(sql.Identifier('cart_items'))
+        cur.execute(query, (qt, scid, pid))
+        self.conn.commit()
+        cur.close()
+    else:
+        cur = self.conn.cursor()
+        query = sql.SQL("INSERT INTO {}(scid, productid, quantity) VALUES (%s, %s, %s)").format(sql.Identifier('cart_items'))
+        cur.execute(query, (scid, pid, quantity))
+        self.conn.commit()
+        cur.close()
+```
+
+#### cursor.execute() 單參數時錯誤
+
+指令|結果
+---|---
+cur.execute(query, (scid, pid))|正常執行，輸入值為tuple
+cur.execute(query, (pid))|錯誤，輸入值為str
+cur.execute(query, (pid,))|正常執行，輸入值為tuple
+
+```python
+>>> t = ('a')
+>>> type(t)
+<class 'str'>
+>>> tt = ('a',)
+>>> type(tt)
+<class 'tuple'>
+```
+
+### 執行結果
+
+```bash
+heroku run python util/tester.py init shopping_cart
+
+插入購物車 & 插入購物車項目
+Confirm to Do(Y/N):Y
+line id:uXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+scid-quy:(5,)
+產品21, 庫存:99
+INS, 21 x 3 to cart:5
+產品23, 庫存:97
+庫存不足
+產品25, 庫存:95
+INS, 25 x 9 to cart:5
+成功
+```
+
+明天將接入訂單系統，發起完整的付款流程
