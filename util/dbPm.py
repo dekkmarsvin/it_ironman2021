@@ -1,12 +1,7 @@
 import os
-from re import match
-from django.http import QueryDict
 import psycopg2
 from psycopg2 import sql
-from requests.api import get
 from flask import current_app as app
-from flask import jsonify
-import logging
 from datetime import datetime, timedelta
 
 class DBPm:
