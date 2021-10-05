@@ -111,7 +111,7 @@ class DBPm:
 
         cur = self.conn.cursor()
         query = sql.SQL("SELECT scid FROM {} WHERE uid = %s and lock = false LIMIT 1").format(sql.Identifier('shopping_cart'))
-        cur.execute(query, (id))
+        cur.execute(query, (id,))
         scid = cur.fetchone()
         cur.close()
         print(f"scid-quy:{scid}")
@@ -119,7 +119,7 @@ class DBPm:
         if(not scid):
             ct = datetime.now().isoformat()
             cur = self.conn.cursor()
-            query = sql.SQL("INSERT INTO shopping_cart(uid, createddate) VALUES (%s, %s) RETURNING scid")
+            query = sql.SQL("INSERT INTO {}(uid, createddate) VALUES (%s, %s) RETURNING scid").format(sql.Identifier('shopping_cart'))
             cur.execute(query, (id, ct))
             scid = cur.fetchone()
             print(f"scid-ins:{scid}")
@@ -130,7 +130,7 @@ class DBPm:
     def QUY_Prod_Quantity_by_pid(self, pid):
         cur = self.conn.cursor()
         query = sql.SQL("select quantity from {} where pid = %s").format(sql.Identifier('products'))
-        cur.execute(query, (pid))
+        cur.execute(query, (pid,))
         qt = cur.fetchone()
         cur.close()
         if(qt):
