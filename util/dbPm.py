@@ -1,4 +1,5 @@
 import os
+from numpy import identity
 import psycopg2
 from psycopg2 import sql
 from flask import current_app as app
@@ -140,7 +141,19 @@ class DBPm:
 
     def INS_Prod_to_Cart(self, scid, pid, quantity):
         cur = self.conn.cursor()
-        query = sql.SQL("INSERT INTO {}(scid, productid, quantity) VALUES (%s, %s, %s)").format(sql.Identifier('cart_items'))
-        cur.execute(query, (scid, pid, quantity))
-        self.conn.commit()
+        query = sql.SQL("SELECT quantity from {} where scid = %s and productid = %s").format(sql.Identifier('cart_items'))
+        cur.execute(query, (scid, pid))
+        qt = cur.fetchone()
         cur.close()
+        if(qt):
+            qt = qt[0] + quantity
+            query = sql.SQL("UPDATE {} SET quantity=%s WHERE scid = %s and productid = %s").format(sql.identity('cart_items'))
+            cur.execute(query, (qt, scid, pid))
+            self.conn.commit()
+            cur.close()
+        else:
+            cur = self.conn.cursor()
+            query = sql.SQL("INSERT INTO {}(scid, productid, quantity) VALUES (%s, %s, %s)").format(sql.Identifier('cart_items'))
+            cur.execute(query, (scid, pid, quantity))
+            self.conn.commit()
+            cur.close()
