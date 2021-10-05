@@ -145,6 +145,7 @@ class DBPm:
         cur.close()
         if(qt):
             qt = qt[0] + quantity
+            cur = self.conn.cursor()
             query = sql.SQL("UPDATE {} SET quantity=%s WHERE scid = %s and productid = %s").format(sql.Identifier('cart_items'))
             cur.execute(query, (qt, scid, pid))
             self.conn.commit()
