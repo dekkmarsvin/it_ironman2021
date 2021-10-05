@@ -2335,10 +2335,10 @@ def doadd(dbpm:DBPm, args):
 def add_shopping_cart(dbpm:DBPm, id=os.environ['Me'], yes=False):
     try:
         id = input(f"輸入Line UID({id}):") or id
-        scid = dbpm.INS_QUY_SC(id)
-        print(f"購物車ID:{scid}")
         if(not yes):yes = askyes()
         if(not yes):return False
+        scid = dbpm.INS_QUY_SC(id)
+        print(f"購物車ID:{scid}")
     except Exception as err:
         print(err)
         return False
