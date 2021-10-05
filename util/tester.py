@@ -78,6 +78,7 @@ def init_add_test_items_to_shopping_cart_via_lineuid(dbpm:DBPm, id=os.environ['M
     cart_item_qut = [3, 6, 9]
 
     try:
+        print(f"line id:{id}")
         scid = dbpm.INS_QUY_SC(id)
         for cp, cq in zip(cart_item_pid, cart_item_qut):
             print(f"INS, {cp} x {cq} to cart:{scid}")
