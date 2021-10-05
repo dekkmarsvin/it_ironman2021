@@ -126,7 +126,7 @@ def doinit(dbpm:DBPm, args):
         r = init_products(dbpm=dbpm, yes=args.yes)
     elif(args.target == 'cart_items' or args.target == 'shopping_cart'):
         print("插入購物車 & 插入購物車項目")
-        r = init_add_test_items_to_shopping_cart_via_lineuid(yes=args.yes)
+        r = init_add_test_items_to_shopping_cart_via_lineuid(dbpm=dbpm, yes=args.yes)
     if(r):print("成功")
     else:print("失敗")
 
