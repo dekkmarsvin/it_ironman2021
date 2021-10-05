@@ -1,5 +1,6 @@
 import os
 from re import match
+from django.http import QueryDict
 import psycopg2
 from psycopg2 import sql
 from requests.api import get
@@ -107,5 +108,44 @@ class DBPm:
         cur.execute(query, (product_name, quantity, product_decp, createddate, expireddate, category, price))
         cur_stat = cur.statusmessage
         # print(f"{cur_stat}")
+        self.conn.commit()
+        cur.close()
+
+    def INS_QUY_SC(self, id):
+        #先檢查是否有存在的可用購物車
+
+        cur = self.conn.cursor()
+        query = sql.SQL("SELECT scid FROM {} WHERE uid = %s and lock = false LIMIT 1").format(sql.Identifier('shopping_cart'))
+        cur.execute(query, (id))
+        scid = cur.fetchone()
+        cur.close()
+        print(f"scid-quy:{scid}")
+
+        if(not scid):
+            ct = datetime.now().isoformat()
+            cur = self.conn.cursor()
+            query = sql.SQL("INSERT INTO shopping_cart(uid, createddate) VALUES (%s, %s) RETURNING scid")
+            cur.execute(query, (id, ct))
+            scid = cur.fetchone()
+            print(f"scid-ins:{scid}")
+            self.conn.commit()
+            cur.close()
+        return scid[0]
+
+    def QUY_Prod_Quantity_by_pid(self, pid):
+        cur = self.conn.cursor()
+        query = sql.SQL("select quantity from {} where pid = %s").format(sql.Identifier('products'))
+        cur.execute(query, (pid))
+        qt = cur.fetchone()
+        cur.close()
+        if(qt):
+            print(f"{pid}'s quantity:{qt[0]}")
+            return qt[0]
+        return None
+
+    def INS_Prod_to_Cart(self, scid, pid, quantity):
+        cur = self.conn.cursor()
+        query = sql.SQL("INSERT INTO {}(scid, productid, quantity) VALUES (%s, %s, %s)").format(sql.Identifier('cart_items'))
+        cur.execute(query, (scid, pid, quantity))
         self.conn.commit()
         cur.close()

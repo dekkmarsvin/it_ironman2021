@@ -1,4 +1,6 @@
 import argparse
+import os
+from tkinter.messagebox import YES
 from dbPm import DBPm
 
 dblist = ['cart_items', 'coupon', 'customers', 'messaging_log', 'orders', 'payment_log', 'product_category', 'products', 'shopping_cart']
@@ -57,6 +59,35 @@ def init_products(dbpm:DBPm, yes=False):
             return False
     return True
 
+def add_shopping_cart(dbpm:DBPm, id=os.environ['Me'], yes=False):
+    try:
+        id = input(f"輸入Line UID({id}):") or id
+        scid = dbpm.INS_QUY_SC(id)
+        print(f"購物車ID:{scid}")
+        if(not yes):yes = askyes()
+        if(not yes):return False
+    except Exception as err:
+        print(err)
+        return False
+    return True
+
+def init_add_test_items_to_shopping_cart_via_lineuid(dbpm:DBPm, id=os.environ['Me'], yes=False):
+    if(not yes):yes = askyes()
+    if(not yes):return False
+
+    cart_item_pid = [21, 23, 25]
+    cart_item_qut = [3, 6, 9]
+
+    try:
+        scid = dbpm.INS_QUY_SC(id)
+        for cp, cq in zip(cart_item_pid, cart_item_qut):
+            print(f"INS, {cp} x {cq} to cart:{scid}")
+            dbpm.INS_Prod_to_Cart(scid, cp, cq)
+    except Exception as err:
+        print(err)
+        return False
+    return True
+
 def add_product_category(dbpm:DBPm, yes=False):
     try:
         cate = input("商品類別:")
@@ -94,7 +125,9 @@ def doinit(dbpm:DBPm, args):
     elif(args.target == 'products'):
         print("插入products測試資料")
         r = init_products(dbpm=dbpm, yes=args.yes)
-
+    elif(args.target == 'cart_items' or args.target == 'shopping_cart'):
+        print("插入購物車 & 插入購物車項目")
+        r = init_add_test_items_to_shopping_cart_via_lineuid(yes=args.yes)
     if(r):print("成功")
     else:print("失敗")
 
@@ -106,6 +139,8 @@ def doadd(dbpm:DBPm, args):
     elif(args.target == 'products'):
         print("手動插入products資料")
         r = add_products(dbpm=dbpm, yes=args.yes)
+    elif(args.target == 'shopping_cart'):
+        r = add_shopping_cart(dbpm=dbpm, yes=args.yes)
     if(r):print("成功")
     else:print("失敗")
 
