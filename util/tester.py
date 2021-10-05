@@ -81,8 +81,13 @@ def init_add_test_items_to_shopping_cart_via_lineuid(dbpm:DBPm, id=os.environ['M
         print(f"line id:{id}")
         scid = dbpm.INS_QUY_SC(id)
         for cp, cq in zip(cart_item_pid, cart_item_qut):
-            print(f"INS, {cp} x {cq} to cart:{scid}")
-            dbpm.INS_Prod_to_Cart(scid, cp, cq)
+            current_product_stocks = dbpm.QUY_Prod_Quantity_by_pid(cp)
+            print(f"產品{cp}, 庫存:{current_product_stocks}")
+            if(current_product_stocks - cq >= 0):
+                print(f"INS, {cp} x {cq} to cart:{scid}")
+                dbpm.INS_Prod_to_Cart(scid, cp, cq)
+            else:
+                print("庫存不足")
     except Exception as err:
         print(err)
         return False
