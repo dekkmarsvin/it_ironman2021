@@ -75,7 +75,7 @@ def init_add_test_items_to_shopping_cart_via_lineuid(dbpm:DBPm, id=os.environ['M
     if(not yes):return False
 
     cart_item_pid = [21, 23, 25]
-    cart_item_qut = [3, 6, 9]
+    cart_item_qut = [3, 999, 9]
 
     try:
         print(f"line id:{id}")

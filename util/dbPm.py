@@ -134,7 +134,6 @@ class DBPm:
         qt = cur.fetchone()
         cur.close()
         if(qt):
-            print(f"{pid}'s quantity:{qt[0]}")
             return qt[0]
         return None
 
