@@ -1,5 +1,4 @@
 import os
-from numpy import identity
 import psycopg2
 from psycopg2 import sql
 from flask import current_app as app
@@ -147,7 +146,7 @@ class DBPm:
         cur.close()
         if(qt):
             qt = qt[0] + quantity
-            query = sql.SQL("UPDATE {} SET quantity=%s WHERE scid = %s and productid = %s").format(sql.identity('cart_items'))
+            query = sql.SQL("UPDATE {} SET quantity=%s WHERE scid = %s and productid = %s").format(sql.Identifier('cart_items'))
             cur.execute(query, (qt, scid, pid))
             self.conn.commit()
             cur.close()
