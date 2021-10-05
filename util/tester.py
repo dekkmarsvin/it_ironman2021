@@ -1,6 +1,5 @@
 import argparse
 import os
-from tkinter.messagebox import YES
 from dbPm import DBPm
 
 dblist = ['cart_items', 'coupon', 'customers', 'messaging_log', 'orders', 'payment_log', 'product_category', 'products', 'shopping_cart']
