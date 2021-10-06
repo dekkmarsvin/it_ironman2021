@@ -61,10 +61,10 @@ def init_products(dbpm:DBPm, yes=False):
 def add_shopping_cart(dbpm:DBPm, id=os.environ['Me'], yes=False):
     try:
         id = input(f"輸入Line UID({id}):") or id
-        scid = dbpm.INS_QUY_SC(id)
-        print(f"購物車ID:{scid}")
         if(not yes):yes = askyes()
         if(not yes):return False
+        scid = dbpm.INS_QUY_SC(id)
+        print(f"購物車ID:{scid}")
     except Exception as err:
         print(err)
         return False
@@ -159,6 +159,7 @@ def doadd(dbpm:DBPm, args):
         print("手動插入products資料")
         r = add_products(dbpm=dbpm, yes=args.yes)
     elif(args.target == 'shopping_cart'):
+        print("手動插入購物車shopping_cart")
         r = add_shopping_cart(dbpm=dbpm, yes=args.yes)
     if(r):print("成功")
     else:print("失敗")
