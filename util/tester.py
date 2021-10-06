@@ -125,7 +125,7 @@ def init_orders(dbpm:DBPm, id=os.environ['Me'], yes=False):
     print(f"{prodlist}, Amount = {tot_price}")
 
     # 鎖定購物車 
-    dbpm.UPD_Shopping_Cart_lock_bY_scid(scid)
+    dbpm.UPD_Shopping_Cart_lock_bY_scid(True, scid)
 
     # 建立信用卡付款交易編號
     paid = dbpm.INS_payment_req('C-1')

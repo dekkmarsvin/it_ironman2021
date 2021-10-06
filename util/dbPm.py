@@ -183,10 +183,10 @@ class DBPm:
             return list(map(list, shopping_list))
         return None
 
-    def UPD_Shopping_Cart_lock_bY_scid(self, scid):
+    def UPD_Shopping_Cart_lock_bY_scid(self, lock, scid):
         cur = self.conn.cursor()
         query = sql.SQL("UPDATE {} SET lock=%s WHERE scid = %s").format(sql.Identifier('shopping_cart'))
-        cur.execute(query, (scid,))
+        cur.execute(query, (lock, scid))
         self.conn.commit()
         cur.close()
 
