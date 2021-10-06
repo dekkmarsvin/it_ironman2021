@@ -16,16 +16,6 @@ from util import APIPm
 
 cfg = None
 
-def loadcfg():
-    Hash = SimpleNamespace(A1 = os.environ['A1'], A2 = os.environ['A2'], B1 = os.environ['B1'], B2 = os.environ['B2'])
-    cfg = SimpleNamespace(Version = os.environ ['Version'], ShopNo = os.environ['ShopNo'], HashID = HashID(Hash), \
-                         Api_URL = os.environ['Api_URL'], Nonce_URL = os.environ['Nonce_URL'], BackendURL = os.environ['BackendURL'], \
-                        ReturnURL = os.environ['ReturnURL'])
-    return cfg
-
-if __name__ != '__main__':
-    cfg = loadcfg()
-
 def xor_two_str(a,b):
     a = int(a,base=16)
     b = int(b,base=16)
@@ -36,6 +26,16 @@ def HashID(Hash:SimpleNamespace):
     str2 = (xor_two_str(Hash.B1, Hash.B2)[2:]).upper()
     # print(f"str1:{str1}, str2:{str2}")
     return str1 + str2 
+
+def loadcfg():
+    Hash = SimpleNamespace(A1 = os.environ['A1'], A2 = os.environ['A2'], B1 = os.environ['B1'], B2 = os.environ['B2'])
+    cfg = SimpleNamespace(Version = os.environ ['Version'], ShopNo = os.environ['ShopNo'], HashID = HashID(Hash), \
+                         Api_URL = os.environ['Api_URL'], Nonce_URL = os.environ['Nonce_URL'], BackendURL = os.environ['BackendURL'], \
+                        ReturnURL = os.environ['ReturnURL'])
+    return cfg
+
+if __name__ != '__main__':
+    cfg = loadcfg()
     
 def GenSign(origin, Nonce:str, HashID:str):
     SignStr = ""
