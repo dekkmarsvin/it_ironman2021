@@ -130,7 +130,7 @@ def init_orders(dbpm:DBPm, id=os.environ['Me'], yes=False):
     # 建立信用卡付款交易編號
     paid = dbpm.INS_payment_req('C-1')
     neworder = APIModel.ReqOrderCreate(ShopNo=os.environ['ShopNo'], OrderNo=paid, Amount=tot_price*100, \
-        PrdtName='IT鐵人賽虛擬商店', PayType="C")
+        PrdtName='IT鐵人賽虛擬商店', ReturnURL=os.environ['ReturnURL'], BackendURL=os.environ['BackendURL'], PayType="C")
     msg, OK = GenApi.OrderCreate(neworder, GenApi.loadcfg())
     print(msg, OK)
     return o_flag
