@@ -123,6 +123,8 @@ class DBPm:
         query = sql.SQL("INSERT INTO {}(type) VALUES (%s) RETURNING paid").format(sql.Identifier('payment_log'))
         cur.execute(query, (pty_type,))
         paid = cur.fetchone()
+        self.conn.commit()
+        cur.close()
         if(paid):
             return paid[0]
         return None
