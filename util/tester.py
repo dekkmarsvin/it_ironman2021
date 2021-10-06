@@ -1,5 +1,6 @@
 import argparse
 import os
+from pickle import TRUE
 from dbPm import DBPm
 
 dblist = ['cart_items', 'coupon', 'customers', 'messaging_log', 'orders', 'payment_log', 'product_category', 'products', 'shopping_cart']
@@ -100,9 +101,20 @@ def init_orders(dbpm:DBPm, id=os.environ['Me'], yes=False):
     scid = dbpm.INS_QUY_SC(id)
     print(f"scid:{scid}")
 
+    o_flag = TRUE
+
     shopping_list = dbpm.QUY_Shopping_Cart_by_scid(scid)
     for prod in shopping_list:
         print(f"商品:{prod[0]}, 數量:{prod[1]}")
+        current_quantity = dbpm.QUY_Prod_Quantity_by_pid(prod[0])
+        if(current_quantity - prod[1] < 0):
+            dbpm.UPD_Cart_items(scid, prod[0], current_quantity)
+            o_flag = False
+        else:
+            new_quantity = current_quantity - prod[1]
+            dbpm.UPD_Prod_Quantity(prod[0], new_quantity)
+    # everything OKay, lock
+    return o_flag
 
 def add_product_category(dbpm:DBPm, yes=False):
     try:

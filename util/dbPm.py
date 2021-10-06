@@ -106,6 +106,18 @@ class DBPm:
         self.conn.commit()
         cur.close()
 
+    def UPD_Prod_Quantity(self, pid, new_quantity):
+        cur = self.conn.cursor()
+        query = sql.SQL("UPDATE {} SET quantity=%s WHERE pid = %s").format(sql.Identifier('products'))
+        cur.execute(query, (new_quantity, pid))
+        self.conn.commit()
+        cur.close()
+
+    def INS_Order(self,):
+        cur = self.conn.cursor()
+        query = sql.SQL("INSERT INTO {}(uid, scid, createddate, paid, ostatus) VALUES (?, ?, ?, ?, ?, ?) RETURNING oid").format(sql.Identifier('orders'))
+        cur.execute(query, )
+
     def INS_QUY_SC(self, id):
         #先檢查是否有存在的可用購物車
 
@@ -145,6 +157,13 @@ class DBPm:
         if(shopping_list):
             return list(map(list, shopping_list))
         return None
+
+    def UPD_Cart_items(self, scid, pid, quantity):
+        cur = self.conn.cursor()
+        query = sql.SQL("UPDATE {} SET quantity=%s WHERE scid = %s and productid = %s").format(sql.Identifier('cart_items'))
+        cur.execute(query, (quantity, scid, pid))
+        self.conn.commit()
+        cur.close()
 
     def INS_Prod_to_Cart(self, scid, pid, quantity):
         cur = self.conn.cursor()
