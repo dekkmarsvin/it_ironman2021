@@ -99,6 +99,8 @@
     - [實作購物車產生與庫存檢查](#實作購物車產生與庫存檢查)
       - [cursor.execute() 單參數時錯誤](#cursorexecute-單參數時錯誤)
     - [執行結果](#執行結果)
+  - [[day24] 產生訂單](#day24-產生訂單)
+    - [產生訂單程式實作](#產生訂單程式實作)
 
 ## [Day1] 金融支付API
 
@@ -2463,3 +2465,122 @@ INS, 25 x 9 to cart:5
 ```
 
 明天將接入訂單系統，發起完整的付款流程
+
+## [day24] 產生訂單
+
+以後不切這麼多表格了，搞死自己
+
+發動產生訂單只需要使用者UID一個參數，大略流程如下
+
+1. 藉由UID取得使用者現在使用的購物車編號
+2. 取得購物車內商品的編號與數量
+   1. 如果返回空則退出
+3. 再次檢查庫存是否足夠
+   1. 庫存足夠消耗則減少庫存數量
+   2. 庫存不足則更新購物車的商品數量，並退出
+4. 產生購物清單與總金額
+5. 鎖定購物車
+6. 依據付款方式產生交易請求
+7. 請求永豐收款API <--目前大概做到這
+8. 紀錄並回應相關API參數
+
+### 產生訂單程式實作
+
+tester.py
+
+```python
+def init_orders(dbpm:DBPm, id=os.environ['Me'], yes=False):
+    if(not yes):yes = askyes()
+    if(not yes):return False
+
+    # 取得購物車編號
+    scid = dbpm.INS_QUY_SC(id)
+    print(f"scid:{scid}")
+
+    # 設定變數
+    o_flag = True
+    prodlist = []
+    tot_price = 0
+
+    # 取得購物明細
+    shopping_list = dbpm.QUY_Shopping_Cart_by_scid(scid)
+    if(not shopping_list):
+        return False
+    for prod in shopping_list:
+        print(f"商品:{prod[0]}, 數量:{prod[1]}")
+        # 庫存檢查
+        current_quantity = dbpm.QUY_Prod_Quantity_by_pid(prod[0])
+        if(current_quantity - prod[1] < 0):
+            # 庫存不足
+            dbpm.UPD_Cart_items(scid, prod[0], current_quantity)
+            o_flag = False
+        else:
+            # 庫存足夠
+            new_quantity = current_quantity - prod[1]
+            dbpm.UPD_Prod_Quantity(prod[0], new_quantity)
+            product_name, product_price = dbpm.QUY_Prod_Name_and_Price_by_pid(prod[0])
+            prodlist.append(f"{product_name} * {prod[1]}")
+            tot_price = tot_price + product_price * prod[1]
+    if(not o_flag):
+        return False
+
+    # 購物明細
+    print(f"{prodlist}, Amount = {tot_price}")
+
+    # 鎖定購物車 
+    dbpm.UPD_Shopping_Cart_lock_bY_scid(True, scid)
+
+    # 建立信用卡付款交易編號
+    paid = dbpm.INS_payment_req('C-1')
+    neworder = APIModel.ReqOrderCreate(ShopNo=os.environ['ShopNo'], OrderNo=paid, Amount=tot_price*100, \
+        PrdtName='IT鐵人賽虛擬商店', ReturnURL=os.environ['ReturnURL'], BackendURL=os.environ['BackendURL'], PayType="C")
+    msg, OK = GenApi.OrderCreate(neworder, GenApi.loadcfg())
+    print(msg, OK)
+    return o_flag
+```
+
+dbPm.py
+
+```python
+def QUY_Shopping_Cart_by_scid(self, scid):
+    cur = self.conn.cursor()
+    query = sql.SQL("SELECT productid, quantity FROM {} where scid = %s").format(sql.Identifier('cart_items'))
+    cur.execute(query, (scid,))
+    shopping_list = cur.fetchall()
+    if(shopping_list):
+        return list(map(list, shopping_list))
+    return None
+
+def UPD_Shopping_Cart_lock_bY_scid(self, lock, scid):
+    cur = self.conn.cursor()
+    query = sql.SQL("UPDATE {} SET lock=%s WHERE scid = %s").format(sql.Identifier('shopping_cart'))
+    cur.execute(query, (lock, scid))
+    self.conn.commit()
+    cur.close()
+
+def UPD_Cart_items(self, scid, pid, quantity):
+    cur = self.conn.cursor()
+    query = sql.SQL("UPDATE {} SET quantity=%s WHERE scid = %s and productid = %s").format(sql.Identifier('cart_items'))
+    cur.execute(query, (quantity, scid, pid))
+    self.conn.commit()
+    cur.close()
+
+def INS_payment_req(self, pty_type):
+    cur = self.conn.cursor()
+    query = sql.SQL("INSERT INTO {}(type) VALUES (%s) RETURNING paid").format(sql.Identifier('payment_log'))
+    cur.execute(query, (pty_type,))
+    paid = cur.fetchone()
+    self.conn.commit()
+    cur.close()
+    if(paid):
+        return paid[0]
+    return None
+```
+
+output
+
+```sh
+['【味丹】激浪汽水-冰晶檸檬風味 * 6', '可口可樂Zero易開罐330ml(24入) * 9', '百事可樂 250ml(24入) * 27'], Amount = 12429
+{"OrderNo":"7","ShopNo":"NA0249_001","TSNo":"NA024900000550","Amount":1242900,"Status":"S","Description":"S0000 – 處理成功","Param1":"","Param2":"","Param3":"","PayType":"C","CardParam":{"CardPayURL":"https://sandbox.sinopac.com/QPay.WebPaySite/Bridge/PayCard?TD=NA024900000550&TK=760e060e-156d-4130-a760-16ff480dcdd5"}} True
+成功
+```
