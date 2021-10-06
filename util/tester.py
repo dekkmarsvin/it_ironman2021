@@ -1,7 +1,8 @@
 import argparse
 import os
-from pickle import TRUE
 from dbPm import DBPm
+from util import APIModel
+from util import GenApi
 
 dblist = ['cart_items', 'coupon', 'customers', 'messaging_log', 'orders', 'payment_log', 'product_category', 'products', 'shopping_cart']
 
@@ -101,7 +102,9 @@ def init_orders(dbpm:DBPm, id=os.environ['Me'], yes=False):
     scid = dbpm.INS_QUY_SC(id)
     print(f"scid:{scid}")
 
-    o_flag = TRUE
+    o_flag = True
+    prodlist = []
+    tot_price = 0
 
     shopping_list = dbpm.QUY_Shopping_Cart_by_scid(scid)
     for prod in shopping_list:
@@ -113,7 +116,23 @@ def init_orders(dbpm:DBPm, id=os.environ['Me'], yes=False):
         else:
             new_quantity = current_quantity - prod[1]
             dbpm.UPD_Prod_Quantity(prod[0], new_quantity)
-    # everything OKay, lock
+            product_name, product_price = dbpm.QUY_Prod_Name_and_Price_by_pid(prod[0])
+            prodlist.append(f"{product_name} * {prod[1]}")
+            tot_price = tot_price + product_price * prod[1]
+    if(not o_flag):
+        return False
+
+    print(f"{prodlist}, Amount = {tot_price}")
+
+    # 鎖定購物車 
+    dbpm.UPD_Shopping_Cart_lock_bY_scid(scid)
+
+    # 建立信用卡付款交易編號
+    paid = dbpm.INS_payment_req('C-1')
+    neworder = APIModel.ReqOrderCreate(ShopNo=os.environ['ShopNo'], OrderNo=paid, Amount=tot_price*100, \
+        PrdtName='IT鐵人賽虛擬商店', PayType="C")
+    msg, OK = GenApi.OrderCreate(neworder)
+    print(msg, OK)
     return o_flag
 
 def add_product_category(dbpm:DBPm, yes=False):

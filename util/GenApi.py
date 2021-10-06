@@ -101,7 +101,7 @@ def GenRequest(cfg, APIService, sign, nonce, message):
     js_req = json.dumps(req, indent=4, ensure_ascii=False)
     return js_req
 
-def OrderCreate(origin, cfg):
+def OrderCreate(origin, cfg=cfg):
     #產生建立訂單交易(虛擬帳號、信用卡) - OrderCreate
     nonce = GetNonce(cfg)
     sign = GenSign(origin, nonce, cfg.HashID)

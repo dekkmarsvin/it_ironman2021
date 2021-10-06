@@ -118,6 +118,22 @@ class DBPm:
         query = sql.SQL("INSERT INTO {}(uid, scid, createddate, paid, ostatus) VALUES (?, ?, ?, ?, ?, ?) RETURNING oid").format(sql.Identifier('orders'))
         cur.execute(query, )
 
+    def INS_payment_req(self, pty_type):
+        cur = self.conn.cursor()
+        query = sql.SQL("INSERT INTO {}(type) VALUES (%s) RETURNING paid").format(sql.Identifier('payment_log'))
+        cur.execute(query, (pty_type,))
+        paid = cur.fetchone()
+        if(paid):
+            return paid[0]
+        return None
+
+    def UPD_payment_bypaid(self, paid:int, ispaid:bool, paytoken:str):
+        cur = self.conn.cursor()
+        query = sql.SQL("UPDATE {} SET ispaid=%s, paytoken=%s WHERE paid = %s").format(sql.Identifier('payment_log'))
+        cur.execute(query, (ispaid, paytoken, paid))
+        self.conn.commit()
+        cur.close()
+
     def INS_QUY_SC(self, id):
         #先檢查是否有存在的可用購物車
 
@@ -139,6 +155,15 @@ class DBPm:
             cur.close()
         return scid[0]
 
+    def QUY_Prod_Name_and_Price_by_pid(self, pid):
+        cur = self.conn.cursor()
+        query = sql.SQL("SELECT product_name, price FROM {} Where pid = %s").format(sql.Identifier('products'))
+        cur.execute(query, (pid,))
+        prod_info = cur.fetchone()
+        if(prod_info):
+            return [prod_info[0], prod_info[1]]
+        return None
+
     def QUY_Prod_Quantity_by_pid(self, pid):
         cur = self.conn.cursor()
         query = sql.SQL("select quantity from {} where pid = %s").format(sql.Identifier('products'))
@@ -157,6 +182,13 @@ class DBPm:
         if(shopping_list):
             return list(map(list, shopping_list))
         return None
+
+    def UPD_Shopping_Cart_lock_bY_scid(self, scid):
+        cur = self.conn.cursor()
+        query = sql.SQL("UPDATE {} SET lock=%s WHERE scid = %s").format(sql.Identifier('shopping_cart'))
+        cur.execute(query, (scid,))
+        self.conn.commit()
+        cur.close()
 
     def UPD_Cart_items(self, scid, pid, quantity):
         cur = self.conn.cursor()
