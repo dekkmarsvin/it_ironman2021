@@ -137,6 +137,15 @@ class DBPm:
             return qt[0]
         return None
 
+    def QUY_Shopping_Cart_by_scid(self, scid):
+        cur = self.conn.cursor()
+        query = sql.SQL("SELECT productid, quantity FROM {} where scid = 5").format(sql.Identifier('cart_items'))
+        cur.execute(query, (scid,))
+        shopping_list = cur.fetchall()
+        if(shopping_list):
+            return list(map(list, shopping_list))
+        return None
+
     def INS_Prod_to_Cart(self, scid, pid, quantity):
         cur = self.conn.cursor()
         query = sql.SQL("SELECT quantity from {} where scid = %s and productid = %s").format(sql.Identifier('cart_items'))

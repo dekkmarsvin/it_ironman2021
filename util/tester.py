@@ -93,6 +93,17 @@ def init_add_test_items_to_shopping_cart_via_lineuid(dbpm:DBPm, id=os.environ['M
         return False
     return True
 
+def init_orders(dbpm:DBPm, id=os.environ['Me'], yes=False):
+    if(not yes):yes = askyes()
+    if(not yes):return False
+
+    scid = dbpm.INS_QUY_SC(id)
+    print(f"scid:{scid}")
+
+    shopping_list = dbpm.QUY_Shopping_Cart_by_scid(scid)
+    for prod in shopping_list:
+        print(f"商品:{prod[0]}, 數量:{prod[1]}")
+
 def add_product_category(dbpm:DBPm, yes=False):
     try:
         cate = input("商品類別:")
@@ -133,6 +144,9 @@ def doinit(dbpm:DBPm, args):
     elif(args.target == 'cart_items' or args.target == 'shopping_cart'):
         print("插入購物車 & 插入購物車項目")
         r = init_add_test_items_to_shopping_cart_via_lineuid(dbpm=dbpm, yes=args.yes)
+    elif(args.target == 'orders'):
+        print("建立測試訂單")
+        r = init_orders(dbpm=dbpm, yes=args.yes)
     if(r):print("成功")
     else:print("失敗")
 
