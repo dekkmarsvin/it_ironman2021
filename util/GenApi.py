@@ -16,6 +16,16 @@ from util import APIPm
 
 cfg = None
 
+def loadcfg():
+    Hash = SimpleNamespace(A1 = os.environ['A1'], A2 = os.environ['A2'], B1 = os.environ['B1'], B2 = os.environ['B2'])
+    cfg = SimpleNamespace(Version = os.environ ['Version'], ShopNo = os.environ['ShopNo'], HashID = HashID(Hash), \
+                         Api_URL = os.environ['Api_URL'], Nonce_URL = os.environ['Nonce_URL'], BackendURL = os.environ['BackendURL'], \
+                        ReturnURL = os.environ['ReturnURL'])
+    return cfg
+
+if __name__ != '__main__':
+    cfg = loadcfg()
+
 def xor_two_str(a,b):
     a = int(a,base=16)
     b = int(b,base=16)
@@ -101,7 +111,7 @@ def GenRequest(cfg, APIService, sign, nonce, message):
     js_req = json.dumps(req, indent=4, ensure_ascii=False)
     return js_req
 
-def OrderCreate(origin, cfg=cfg):
+def OrderCreate(origin, cfg):
     #產生建立訂單交易(虛擬帳號、信用卡) - OrderCreate
     nonce = GetNonce(cfg)
     sign = GenSign(origin, nonce, cfg.HashID)
@@ -136,16 +146,6 @@ def OrderPayQuery(ShopNo=os.environ['ShopNo'], PayToken=None):
     resp = APIPm.sendreq(url=cfg.Api_URL, data=payload)
     funbiz_msg = Response_Decrypt(resp, cfg.HashID)
     return funbiz_msg
-
-def loadcfg():
-    Hash = SimpleNamespace(A1 = os.environ['A1'], A2 = os.environ['A2'], B1 = os.environ['B1'], B2 = os.environ['B2'])
-    cfg = SimpleNamespace(Version = os.environ ['Version'], ShopNo = os.environ['ShopNo'], HashID = HashID(Hash), \
-                         Api_URL = os.environ['Api_URL'], Nonce_URL = os.environ['Nonce_URL'], BackendURL = os.environ['BackendURL'], \
-                        ReturnURL = os.environ['ReturnURL'])
-    return cfg
-
-if __name__ != '__main__':
-    cfg = loadcfg()
 
 if __name__ == '__main__':
     # env = ConfigParser()
