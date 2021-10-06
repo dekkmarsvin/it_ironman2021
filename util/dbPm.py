@@ -176,7 +176,7 @@ class DBPm:
 
     def QUY_Shopping_Cart_by_scid(self, scid):
         cur = self.conn.cursor()
-        query = sql.SQL("SELECT productid, quantity FROM {} where scid = 5").format(sql.Identifier('cart_items'))
+        query = sql.SQL("SELECT productid, quantity FROM {} where scid = %s").format(sql.Identifier('cart_items'))
         cur.execute(query, (scid,))
         shopping_list = cur.fetchall()
         if(shopping_list):

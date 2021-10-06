@@ -107,6 +107,8 @@ def init_orders(dbpm:DBPm, id=os.environ['Me'], yes=False):
     tot_price = 0
 
     shopping_list = dbpm.QUY_Shopping_Cart_by_scid(scid)
+    if(not shopping_list):
+        return False
     for prod in shopping_list:
         print(f"商品:{prod[0]}, 數量:{prod[1]}")
         current_quantity = dbpm.QUY_Prod_Quantity_by_pid(prod[0])
