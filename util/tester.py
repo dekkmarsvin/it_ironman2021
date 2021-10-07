@@ -129,9 +129,12 @@ def init_orders(dbpm:DBPm, id=os.environ['Me'], yes=False):
     # 鎖定購物車 
     dbpm.UPD_Shopping_Cart_lock_bY_scid(True, scid)
 
+    # 建立訂單
+    oid = dbpm.INS_Order(os.environ['Me'], scid, ostatus="初始化訂單")
+
     # 建立信用卡付款交易編號
     paid = dbpm.INS_payment_req('C-1')
-    neworder = APIModel.ReqOrderCreate(ShopNo=os.environ['ShopNo'], OrderNo=paid, Amount=tot_price*100, \
+    neworder = APIModel.ReqOrderCreate(ShopNo=os.environ['ShopNo'], OrderNo=oid, Amount=tot_price*100, \
         PrdtName='IT鐵人賽虛擬商店', ReturnURL=os.environ['ReturnURL'], BackendURL=os.environ['BackendURL'], PayType="C")
     msg = GenApi.OrderCreate(neworder)
     print(msg)
@@ -139,9 +142,11 @@ def init_orders(dbpm:DBPm, id=os.environ['Me'], yes=False):
     if(msg):
         if(msg.Status == 'S'):
             dbpm.UPD_payment_bypaid(paid=paid, tsno=msg.TSNo, ts_decp=msg.Description, ts_status=True, cardpayurl=msg.CardParam.CardPayURL)
+            dbpm.UPD_Order_by_oid(paid=paid, ostatus="已產生付款請求", oid=oid)
             return True
         else:
             dbpm.UPD_payment_bypaid(paid=paid, tsno=msg.TSNo, ts_decp=msg.Description, ts_status=False, cardpayurl=msg.CardParam.CardPayURL)
+            dbpm.UPD_Order_by_oid(paid=paid, ostatus="產生付款請求失敗", oid=oid)
     return False
 
 def add_product_category(dbpm:DBPm, yes=False):

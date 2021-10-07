@@ -20,6 +20,7 @@ import pytz
 
 import util.dbPm as dbPm
 import util.GenApi as FunBizApi
+import util.OrderHandler as Handler
 
 app = Flask(__name__)
 api = Api(app)
@@ -102,7 +103,7 @@ def funBIZ_route():
     # app.logger.debug(f"content:{content}")
     if(content['ShopNo'] == os.environ['ShopNo']):
         resp = FunBizApi.OrderPayQuery(PayToken=content['PayToken'])
-        app.logger.debug(f"OrderPayQuery:{resp}")
+        Handler.OrderHandler(resp)
         return jsonify({'Status':'S'})
     else:
         return jsonify({'Status':'F'})
@@ -114,9 +115,8 @@ def order_summary_route():
     # app.logger.debug(f"content:{content}")
     if(content.get('ShopNo') == os.environ['ShopNo']):
         resp = FunBizApi.OrderPayQuery(PayToken=content.get('PayToken'))
-        app.logger.debug(f"OrderPayQuery:{resp}")
+        Handler.OrderHandler(resp)
     return jsonify({'order-summary':'S'})
-
 
 @app.route("/dbstatus", methods=['GET'])
 def DBversion():

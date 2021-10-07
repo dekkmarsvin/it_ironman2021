@@ -133,11 +133,17 @@ class DBPm:
                         ts_decp:str = None, ts_status:bool = False, cardpayurl:str = None, \
                         atmpayno:str = None, webatmurl:str = None, opturl:str = None):
         cur = self.conn.cursor()
-        # query = sql.SQL("UPDATE {} SET ispaid=%s, paytoken=%s WHERE paid = %s").format(sql.Identifier('payment_log'))
         query = sql.SQL("UPDATE {} SET ispaid=%s, paytoken=%s, tsno=%s, ts_decp=%s, ts_status=%s, cardpayurl=%s, \
             atmpayno=%s, webatmurl=%s, opturl=%s WHERE paid = %s").format(sql.Identifier('payment_log'))
         cur.execute(query, (ispaid, paytoken, tsno, ts_decp, ts_status, cardpayurl, atmpayno, webatmurl, opturl, paid))
         self.conn.commit()
+        cur.close()
+
+    def UPD_payment_bytsno(self, ispaid:bool = False, tsno:str = None, aptype:str = None):
+        cur = self.conn.cursor()
+        query = sql.SQL("UPDATE {} SET ispaid=%s, aptype=%s WHERE tsno = %s").format(sql.Identifier('payment_log'))
+        cur.execute(query, (ispaid, aptype, tsno))
+        self.conn.commit()s
         cur.close()
 
     def INS_QUY_SC(self, id):
@@ -222,3 +228,26 @@ class DBPm:
             cur.execute(query, (scid, pid, quantity))
             self.conn.commit()
             cur.close()
+
+    def INS_Order(self, uid, scid, createdate = datetime.now().isoformat(), paid = None, ostatus:str = None):
+        cur = self.conn.cursor()
+        query = sql.SQL("INSERT INTO {}(uid, scid, createddate, paid, ostatus) VALUES (%s, %s, %s, %s, %s) RETURNING oid").format(sql.Identifier('orders'))
+        cur.execute(query, (uid, scid, createdate, paid, ostatus))
+        oid = cur.fetchone()
+        self.conn.commit()
+        cur.close()
+        return oid[0]
+
+    def UPD_Order_by_oid(self, paid, ostatus:str, oid):
+        cur = self.conn.cursor()
+        query = sql.SQL("UPDATE {} SET paid=%s, ostatus=%s WHERE oid = %s").format(sql.Identifier('orders'))
+        cur.execute(query, (paid, ostatus, oid))
+        self.conn.commit()
+        cur.close()
+
+    def UPD_Order_status_by_oid(self, ostatus:str, oid):
+        cur = self.conn.cursor()
+        query = sql.SQL("UPDATE {} SET ostatus=%s WHERE oid = %s").format(sql.Identifier('orders'))
+        cur.execute(query, (ostatus, oid))
+        self.conn.commit()
+        cur.close()
