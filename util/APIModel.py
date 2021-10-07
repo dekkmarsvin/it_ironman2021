@@ -18,7 +18,7 @@ def ReqOrderQuery(ShopNo = "", OrderNo = "", PayType = "", OrderDateTimeS = "", 
 def ResOrderCreate(resp:str):
     resp = json.loads(resp)
     order = SimpleNamespace(OrderNo = resp['OrderNo'], ShopNo = resp['ShopNo'], TSNo = resp['TSNo'], Amount = resp['Amount'], Status = resp['Status'], \
-        Description = resp['Description'], Param1 = resp['Param1'], Param2 = resp['Param2'], Param3 = resp['Param3'], PayType = ['PayType'])
+        Description = resp['Description'], Param1 = resp['Param1'], Param2 = resp['Param2'], Param3 = resp['Param3'], PayType = resp['PayType'])
     if(resp.get('ATMParam')):
         order.ATMParam = SimpleNamespace(AtmPayNo = resp['ATMParam']['AtmPayNo'], WebAtmURL = resp['ATMParam']['WebAtmURL'], OtpURL = resp['ATMParam']['OtpURL'])
     elif(resp.get('CardParam')):

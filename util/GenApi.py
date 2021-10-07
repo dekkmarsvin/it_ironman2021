@@ -117,7 +117,6 @@ def OrderCreate(origin, cfg):
     body = GenRequest(cfg=cfg, APIService="OrderCreate", sign=sign, nonce=nonce, message=msg)
     resp = APIPm.sendreq(url=cfg.Api_URL ,data=body)
     funbiz_msg, isvalid = Response_Decrypt(resp, cfg.HashID)
-    print(funbiz_msg, isvalid)
     if(isvalid):
         return APIModel.ResOrderCreate(funbiz_msg)
     else:
@@ -169,7 +168,7 @@ if __name__ == '__main__':
                          Api_URL = os.environ['Api_URL'], Nonce_URL = os.environ['Nonce_URL'], BackendURL = os.environ['BackendURL'], \
                         ReturnURL = os.environ['ReturnURL'])
 
-    neworder = APIModel.ReqOrderCreate(ShopNo="NA0249_001", OrderNo="2021100400003", Amount=40400, \
+    neworder = APIModel.ReqOrderCreate(ShopNo="NA0249_001", OrderNo="2021100400004", Amount=40400, \
                 PrdtName="IPhone 13 Pro Max 256g", ReturnURL=cfg.ReturnURL, \
                     BackendURL=cfg.BackendURL, PayType="C", AutoBilling="Y", PayTypeSub="ONE")
     msg = OrderCreate(neworder, cfg)
