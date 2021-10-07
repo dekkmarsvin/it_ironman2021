@@ -23,6 +23,7 @@ def ResOrderCreate(resp:str):
         order.ATMParam = SimpleNamespace(AtmPayNo = resp['ATMParam']['AtmPayNo'], WebAtmURL = resp['ATMParam']['WebAtmURL'], OtpURL = resp['ATMParam']['OtpURL'])
     elif(resp.get('CardParam')):
         order.CardParam = SimpleNamespace(CardPayURL = resp['CardParam']['CardPayURL'])
+    return order
 
 def ResOrderPayQuery(resp:str):
     resp = json.loads(resp)
