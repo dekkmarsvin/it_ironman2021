@@ -103,7 +103,7 @@ def funBIZ_route():
     # app.logger.debug(f"content:{content}")
     if(content['ShopNo'] == os.environ['ShopNo']):
         resp = FunBizApi.OrderPayQuery(PayToken=content['PayToken'])
-        Handler.OrderHandler(resp)
+        Handler.OrderPayQueryHandler(resp)
         return jsonify({'Status':'S'})
     else:
         return jsonify({'Status':'F'})
@@ -115,7 +115,7 @@ def order_summary_route():
     # app.logger.debug(f"content:{content}")
     if(content.get('ShopNo') == os.environ['ShopNo']):
         resp = FunBizApi.OrderPayQuery(PayToken=content.get('PayToken'))
-        Handler.OrderHandler(resp)
+        Handler.OrderPayQueryHandler(resp)
     return jsonify({'order-summary':'S'})
 
 @app.route("/dbstatus", methods=['GET'])
