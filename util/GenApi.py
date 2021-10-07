@@ -29,9 +29,8 @@ def loadcfg():
                         ReturnURL = os.environ['ReturnURL'])
     return cfg
 
-if __name__ != '__main__':
-    global cfg
-    cfg = loadcfg()
+global cfg
+cfg = loadcfg()
     
 def GenSign(origin, Nonce:str, HashID:str):
     SignStr = ""
@@ -107,7 +106,7 @@ def GenRequest(cfg, APIService, sign, nonce, message):
     js_req = json.dumps(req, indent=4, ensure_ascii=False)
     return js_req
 
-def OrderCreate(origin, cfg = cfg):
+def OrderCreate(origin):
     #產生建立訂單交易(虛擬帳號、信用卡) - OrderCreate
     nonce = GetNonce(cfg)
     sign = GenSign(origin, nonce, cfg.HashID)
@@ -170,7 +169,7 @@ if __name__ == '__main__':
     neworder = APIModel.ReqOrderCreate(ShopNo="NA0249_001", OrderNo="2021100400004", Amount=40400, \
                 PrdtName="IPhone 13 Pro Max 256g", ReturnURL=cfg.ReturnURL, \
                     BackendURL=cfg.BackendURL, PayType="C", AutoBilling="Y", PayTypeSub="ONE")
-    msg = OrderCreate(neworder, cfg)
+    msg = OrderCreate(neworder)
     if(msg):print("建立訂單成功")
     else:print("建立訂單失敗")
     print(msg)

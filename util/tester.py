@@ -134,7 +134,7 @@ def init_orders(dbpm:DBPm, id=os.environ['Me'], yes=False):
     neworder = APIModel.ReqOrderCreate(ShopNo=os.environ['ShopNo'], OrderNo=paid, Amount=tot_price*100, \
         PrdtName='IT鐵人賽虛擬商店', ReturnURL=os.environ['ReturnURL'], BackendURL=os.environ['BackendURL'], PayType="C")
     msg = GenApi.OrderCreate(neworder)
-
+    print(msg)
     return o_flag
 
 def add_product_category(dbpm:DBPm, yes=False):
