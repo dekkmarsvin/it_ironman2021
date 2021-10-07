@@ -171,7 +171,7 @@ if __name__ == '__main__':
     neworder = APIModel.ReqOrderCreate(ShopNo="NA0249_001", OrderNo="2021100400003", Amount=40400, \
                 PrdtName="IPhone 13 Pro Max 256g", ReturnURL=cfg.ReturnURL, \
                     BackendURL=cfg.BackendURL, PayType="C", AutoBilling="Y", PayTypeSub="ONE")
-    msg, OK = OrderCreate(neworder, cfg)
+    msg = OrderCreate(neworder, cfg)
     if(OK):print("建立訂單成功")
     else:print("建立訂單失敗")
     print(msg)
