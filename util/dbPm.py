@@ -142,7 +142,7 @@ class DBPm:
     def UPD_payment_bytsno(self, ispaid:bool = False, paytoken:str=None, tsno:str = None, aptype:str = None):
         cur = self.conn.cursor()
         query = sql.SQL("UPDATE {} SET ispaid=%s, paytoken=%s, aptype=%s WHERE tsno = %s").format(sql.Identifier('payment_log'))
-        cur.execute(query, (ispaid, aptype, tsno))
+        cur.execute(query, (ispaid, paytoken, aptype, tsno))
         self.conn.commit()
         cur.close()
 

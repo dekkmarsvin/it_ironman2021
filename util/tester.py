@@ -100,7 +100,7 @@ def init_orders(dbpm:DBPm, id=os.environ['Me'], yes=False):
     if(not yes):return False
 
     scid = dbpm.INS_QUY_SC(id)
-    print(f"scid:{scid}")
+    print(f"檢查購物車:{scid}")
 
     o_flag = True
     prodlist = []
@@ -137,7 +137,7 @@ def init_orders(dbpm:DBPm, id=os.environ['Me'], yes=False):
     msg = GenApi.OrderCreate(neworder)
     # print(msg)
 
-    print(f"建立訂單: 編號:{msg.OrderNo}:{prodlist}, 請款金額 = {tot_price}, 付款ID:{paid}, {msg.Description}")
+    print(f"建立訂單: 編號:{msg.OrderNo}:{prodlist}, 請款金額 = {tot_price}, 付款ID:{paid}, {msg.Description}", {msg.CardParam.CardPayURL})
 
     if(msg):
         if(msg.Status == 'S'):
