@@ -172,7 +172,7 @@ if __name__ == '__main__':
                 PrdtName="IPhone 13 Pro Max 256g", ReturnURL=cfg.ReturnURL, \
                     BackendURL=cfg.BackendURL, PayType="C", AutoBilling="Y", PayTypeSub="ONE")
     msg = OrderCreate(neworder, cfg)
-    if(OK):print("建立訂單成功")
+    if(msg):print("建立訂單成功")
     else:print("建立訂單失敗")
     print(msg)
 
