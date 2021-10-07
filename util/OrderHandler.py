@@ -16,10 +16,10 @@ def OrderPayQueryHandler(resp:APIModel.ResOrderPayQuery):
     payinfo = resp.TSResultContent
     
     if(payinfo.Status != 'S'):
-        dbpm.UPD_payment_bytsno(ispaid=False, tsno=payinfo.TSNo, aptype=payinfo.APType)
+        dbpm.UPD_payment_bytsno(ispaid=False, paytoken=resp.PayToken, tsno=payinfo.TSNo, aptype=payinfo.APType)
         app.logger.info(f"訂單付款失敗, 訂單編號:{payinfo.OrderNo} - {resp.Description}")
         dbpm.UPD_Order_status_by_oid(ostatus=f"付款失敗-{resp.Description}", oid = payinfo.OrderNo)
     else:
-        dbpm.UPD_payment_bytsno(ispaid=True, tsno=payinfo.TSNo, aptype=payinfo.APType)
+        dbpm.UPD_payment_bytsno(ispaid=True, paytoken=resp.PayToken, tsno=payinfo.TSNo, aptype=payinfo.APType)
         app.logger.info(f"訂單付款成功, 訂單編號:{payinfo.OrderNo} - {resp.Description}")
         dbpm.UPD_Order_status_by_oid(ostatus=f"付款成功-{resp.Description}", oid = payinfo.OrderNo)

@@ -139,9 +139,9 @@ class DBPm:
         self.conn.commit()
         cur.close()
 
-    def UPD_payment_bytsno(self, ispaid:bool = False, tsno:str = None, aptype:str = None):
+    def UPD_payment_bytsno(self, ispaid:bool = False, paytoken:str=None, tsno:str = None, aptype:str = None):
         cur = self.conn.cursor()
-        query = sql.SQL("UPDATE {} SET ispaid=%s, aptype=%s WHERE tsno = %s").format(sql.Identifier('payment_log'))
+        query = sql.SQL("UPDATE {} SET ispaid=%s, paytoken=%s, aptype=%s WHERE tsno = %s").format(sql.Identifier('payment_log'))
         cur.execute(query, (ispaid, aptype, tsno))
         self.conn.commit()
         cur.close()
@@ -154,7 +154,7 @@ class DBPm:
         cur.execute(query, (id,))
         scid = cur.fetchone()
         cur.close()
-        print(f"scid-quy:{scid}")
+        # print(f"scid-quy:{scid}")
 
         if(not scid):
             ct = datetime.now().isoformat()
@@ -162,7 +162,7 @@ class DBPm:
             query = sql.SQL("INSERT INTO {}(uid, createddate) VALUES (%s, %s) RETURNING scid").format(sql.Identifier('shopping_cart'))
             cur.execute(query, (id, ct))
             scid = cur.fetchone()
-            print(f"scid-ins:{scid}")
+            # print(f"scid-ins:{scid}")
             self.conn.commit()
             cur.close()
         return scid[0]

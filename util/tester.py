@@ -110,7 +110,7 @@ def init_orders(dbpm:DBPm, id=os.environ['Me'], yes=False):
     if(not shopping_list):
         return False
     for prod in shopping_list:
-        print(f"商品:{prod[0]}, 數量:{prod[1]}")
+        # print(f"商品:{prod[0]}, 數量:{prod[1]}")
         current_quantity = dbpm.QUY_Prod_Quantity_by_pid(prod[0])
         if(current_quantity - prod[1] < 0):
             dbpm.UPD_Cart_items(scid, prod[0], current_quantity)
@@ -124,8 +124,6 @@ def init_orders(dbpm:DBPm, id=os.environ['Me'], yes=False):
     if(not o_flag):
         return False
 
-    print(f"{prodlist}, Amount = {tot_price}")
-
     # 鎖定購物車 
     dbpm.UPD_Shopping_Cart_lock_bY_scid(True, scid)
 
@@ -137,7 +135,9 @@ def init_orders(dbpm:DBPm, id=os.environ['Me'], yes=False):
     neworder = APIModel.ReqOrderCreate(ShopNo=os.environ['ShopNo'], OrderNo=oid, Amount=tot_price*100, \
         PrdtName='IT鐵人賽虛擬商店', ReturnURL=os.environ['ReturnURL'], BackendURL=os.environ['BackendURL'], PayType="C")
     msg = GenApi.OrderCreate(neworder)
-    print(msg)
+    # print(msg)
+
+    print(f"建立訂單: 編號:{msg.OrderNo}:{prodlist}, 請款金額 = {tot_price}, 付款ID:{paid}, {msg.Description}")
 
     if(msg):
         if(msg.Status == 'S'):
