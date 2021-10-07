@@ -143,7 +143,7 @@ class DBPm:
         cur = self.conn.cursor()
         query = sql.SQL("UPDATE {} SET ispaid=%s, aptype=%s WHERE tsno = %s").format(sql.Identifier('payment_log'))
         cur.execute(query, (ispaid, aptype, tsno))
-        self.conn.commit()s
+        self.conn.commit()
         cur.close()
 
     def INS_QUY_SC(self, id):
