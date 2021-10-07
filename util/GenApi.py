@@ -117,10 +117,10 @@ def OrderCreate(origin, cfg):
     body = GenRequest(cfg=cfg, APIService="OrderCreate", sign=sign, nonce=nonce, message=msg)
     resp = APIPm.sendreq(url=cfg.Api_URL ,data=body)
     funbiz_msg, isvalid = Response_Decrypt(resp, cfg.HashID)
+    print(funbiz_msg, isvalid)
     if(isvalid):
         return APIModel.ResOrderCreate(funbiz_msg)
     else:
-        print(funbiz_msg)
         app.logger.error(f"OrderCreate簽章驗證失敗，交易代號:{origin.OrderNo}")
         return None
 
