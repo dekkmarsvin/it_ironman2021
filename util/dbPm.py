@@ -129,10 +129,14 @@ class DBPm:
             return paid[0]
         return None
 
-    def UPD_payment_bypaid(self, paid:int, ispaid:bool, paytoken:str):
+    def UPD_payment_bypaid(self, paid:int, ispaid:bool = False, paytoken:str = None, tsno:str = None, \
+                        ts_decp:str = None, ts_status:bool = False, cardpayurl:str = None, \
+                        atmpayno:str = None, webatmurl:str = None, opturl:str = None):
         cur = self.conn.cursor()
-        query = sql.SQL("UPDATE {} SET ispaid=%s, paytoken=%s WHERE paid = %s").format(sql.Identifier('payment_log'))
-        cur.execute(query, (ispaid, paytoken, paid))
+        # query = sql.SQL("UPDATE {} SET ispaid=%s, paytoken=%s WHERE paid = %s").format(sql.Identifier('payment_log'))
+        query = sql.SQL("UPDATE {} SET ispaid=%s, paytoken=%s, tsno=%s, ts_decp=%s, ts_status=%s, cardpayurl=%s, \
+            atmpayno=%s, webatmurl=%s, opturl=%s WHERE paid = %s").format(sql.Identifier('payment_log'))
+        cur.execute(query, (ispaid, paytoken, tsno, ts_decp, ts_status, cardpayurl, atmpayno, webatmurl, opturl, paid))
         self.conn.commit()
         cur.close()
 

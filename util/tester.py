@@ -135,7 +135,14 @@ def init_orders(dbpm:DBPm, id=os.environ['Me'], yes=False):
         PrdtName='IT鐵人賽虛擬商店', ReturnURL=os.environ['ReturnURL'], BackendURL=os.environ['BackendURL'], PayType="C")
     msg = GenApi.OrderCreate(neworder)
     print(msg)
-    return o_flag
+
+    if(msg):
+        if(msg.Status == 'S'):
+            dbpm.UPD_payment_bypaid(paid=paid, tsno=msg.TSNo, ts_decp=msg.Description, ts_status=True, cardpayurl=msg.CardParam.CardPayURL)
+            return True
+        else:
+            dbpm.UPD_payment_bypaid(paid=paid, tsno=msg.TSNo, ts_decp=msg.Description, ts_status=False, cardpayurl=msg.CardParam.CardPayURL)
+    return False
 
 def add_product_category(dbpm:DBPm, yes=False):
     try:
