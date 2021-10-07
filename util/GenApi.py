@@ -1,15 +1,12 @@
-from sys import api_version
 from types import SimpleNamespace
 from configparser import ConfigParser
 import json
-from typing import Type
 import hashlib
 from base64 import b64decode, b64encode
 from Cryptodome.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 import os
-
-from flask.json import load
+from flask import current_app as app
 
 from util import APIModel
 from util import APIPm
@@ -119,8 +116,12 @@ def OrderCreate(origin, cfg):
     msg = GenMessage(iv, origin, cfg.HashID)
     body = GenRequest(cfg=cfg, APIService="OrderCreate", sign=sign, nonce=nonce, message=msg)
     resp = APIPm.sendreq(url=cfg.Api_URL ,data=body)
-    funbiz_msg = Response_Decrypt(resp, cfg.HashID)
-    return funbiz_msg
+    funbiz_msg, isvalid = Response_Decrypt(resp, cfg.HashID)
+    if(isvalid):
+        return APIModel.ResOrderCreate(funbiz_msg)
+    else:
+        app.logger.error(f"OrderCreate簽章驗證失敗，交易代號:{origin.OrderNo}")
+        return None
 
 def GenOrderQuery(cfg):
     #訂單交易查詢 - OrderQuery
@@ -144,8 +145,12 @@ def OrderPayQuery(ShopNo=os.environ['ShopNo'], PayToken=None):
     emsg = AES_CBC_Encrpt(cfg.HashID, iv, msg)
     payload = GenRequest(cfg, "OrderPayQuery", sign, nonce, emsg)
     resp = APIPm.sendreq(url=cfg.Api_URL, data=payload)
-    funbiz_msg = Response_Decrypt(resp, cfg.HashID)
-    return funbiz_msg
+    funbiz_msg, isvalid = Response_Decrypt(resp, cfg.HashID)
+    if(isvalid):
+        return APIModel.ResOrderPayQuery(funbiz_msg)
+    else:
+        app.logger.error(f"OrderPayQuery簽章驗證失敗，PayToken:{PayToken}")
+        return None
 
 if __name__ == '__main__':
     # env = ConfigParser()
