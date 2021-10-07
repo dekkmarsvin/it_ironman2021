@@ -101,6 +101,9 @@
     - [執行結果](#執行結果)
   - [[day24] 產生訂單](#day24-產生訂單)
     - [產生訂單程式實作](#產生訂單程式實作)
+  - [[day25] 建立訂單 & 付款處理](#day25-建立訂單--付款處理)
+    - [實作完整訂單流程](#實作完整訂單流程)
+    - [今天總結](#今天總結)
 
 ## [Day1] 金融支付API
 
@@ -2584,3 +2587,151 @@ output
 {"OrderNo":"7","ShopNo":"NA0249_001","TSNo":"NA024900000550","Amount":1242900,"Status":"S","Description":"S0000 – 處理成功","Param1":"","Param2":"","Param3":"","PayType":"C","CardParam":{"CardPayURL":"https://sandbox.sinopac.com/QPay.WebPaySite/Bridge/PayCard?TD=NA024900000550&TK=760e060e-156d-4130-a760-16ff480dcdd5"}} True
 成功
 ```
+
+## [day25] 建立訂單 & 付款處理
+
+終於走完完整的訂單處理了，0rz
+
+一樣Review一下流程
+
+1. 建立購物車
+2. 加入購物車項目
+3. 發起建立訂單
+4. 檢查庫存與訂單品項
+5. 鎖定購物車
+6. 建立交易請求
+7. 取得付款資訊提供給使用者
+8. 使用者完成付款
+9. 回傳PayToken
+10. 驗證PayToken&解密
+11. 確認付款狀態
+
+會用到的資料庫資料表:
+
+Table Name|功能
+---|---
+shopping_cart|購物車
+cart_items|購物車內品項
+product_category|產品類型
+products|產品資訊
+payment_log|付款資訊
+orders|訂單紀錄
+
+### 實作完整訂單流程
+
+tester.py 建立訂單
+
+```python
+def init_orders(dbpm:DBPm, id=os.environ['Me'], yes=False):
+    if(not yes):yes = askyes()
+    if(not yes):return False
+
+    scid = dbpm.INS_QUY_SC(id)
+    print(f"檢查購物車:{scid}")
+
+    o_flag = True
+    prodlist = []
+    tot_price = 0
+
+    shopping_list = dbpm.QUY_Shopping_Cart_by_scid(scid)
+    if(not shopping_list):
+        return False
+    for prod in shopping_list:
+        # print(f"商品:{prod[0]}, 數量:{prod[1]}")
+        current_quantity = dbpm.QUY_Prod_Quantity_by_pid(prod[0])
+        if(current_quantity - prod[1] < 0):
+            dbpm.UPD_Cart_items(scid, prod[0], current_quantity)
+            o_flag = False
+        else:
+            new_quantity = current_quantity - prod[1]
+            dbpm.UPD_Prod_Quantity(prod[0], new_quantity)
+            product_name, product_price = dbpm.QUY_Prod_Name_and_Price_by_pid(prod[0])
+            prodlist.append(f"{product_name} * {prod[1]}")
+            tot_price = tot_price + product_price * prod[1]
+    if(not o_flag):
+        return False
+
+    # 鎖定購物車 
+    dbpm.UPD_Shopping_Cart_lock_bY_scid(True, scid)
+
+    # 建立訂單
+    oid = dbpm.INS_Order(os.environ['Me'], scid, ostatus="初始化訂單")
+
+    # 建立信用卡付款交易編號
+    paid = dbpm.INS_payment_req('C-1', tot_price)
+    neworder = APIModel.ReqOrderCreate(ShopNo=os.environ['ShopNo'], OrderNo=oid, Amount=tot_price*100, \
+        PrdtName='IT鐵人賽虛擬商店', ReturnURL=os.environ['ReturnURL'], BackendURL=os.environ['BackendURL'], PayType="C")
+    msg = GenApi.OrderCreate(neworder)
+    # print(msg)
+
+    print(f"建立訂單: 編號:{msg.OrderNo}:{prodlist}, 請款金額 = {tot_price}, 付款ID:{paid}, {msg.Description}", {msg.CardParam.CardPayURL})
+
+    if(msg):
+        if(msg.Status == 'S'):
+            dbpm.UPD_payment_bypaid(paid=paid, tsno=msg.TSNo, ts_decp=msg.Description, ts_status=True, cardpayurl=msg.CardParam.CardPayURL)
+            dbpm.UPD_Order_by_oid(paid=paid, ostatus="已產生付款請求", oid=oid)
+            return True
+        else:
+            dbpm.UPD_payment_bypaid(paid=paid, tsno=msg.TSNo, ts_decp=msg.Description, ts_status=False, cardpayurl=msg.CardParam.CardPayURL)
+            dbpm.UPD_Order_by_oid(paid=paid, ostatus="產生付款請求失敗", oid=oid)
+    return False
+```
+
+此時發生如下變動:
+
+1. 已減少商品庫存
+2. 已鎖定購物車
+3. 已建立訂單
+4. 已建立付款請求
+
+接下來將取出付款資訊給使用者，假設使用者已完成付款，會從兩個方式接收到PayToken
+
+```python
+@app.route('/funBIZ_backend', methods=['POST'])
+def funBIZ_route():
+    # app.logger.debug(f"headers:{dict(request.headers)}")
+    content = request.json
+    # app.logger.debug(f"content:{content}")
+    if(content['ShopNo'] == os.environ['ShopNo']):
+        resp = FunBizApi.OrderPayQuery(PayToken=content['PayToken'])
+        Handler.OrderPayQueryHandler(resp)
+        return jsonify({'Status':'S'})
+    else:
+        return jsonify({'Status':'F'})
+
+@app.route('/order-summary', methods=['POST'])
+def order_summary_route():
+    # app.logger.debug(f"headers:{dict(request.headers)}")
+    content = request.form
+    # app.logger.debug(f"content:{content}")
+    if(content.get('ShopNo') == os.environ['ShopNo']):
+        resp = FunBizApi.OrderPayQuery(PayToken=content.get('PayToken'))
+        Handler.OrderPayQueryHandler(resp)
+    return jsonify({'order-summary':'S'})
+```
+
+進行[驗證](https://ithelp.ithome.com.tw/articles/10277147)
+
+util/OrderHandler.py
+
+```python
+def OrderPayQueryHandler(resp:APIModel.ResOrderPayQuery):
+    app.logger.debug(f"ResOrderPayQuery:{resp}")
+
+    payinfo = resp.TSResultContent
+    
+    if(payinfo.Status != 'S'):
+        dbpm.UPD_payment_bytsno(ispaid=False, paytoken=resp.PayToken, tsno=payinfo.TSNo, aptype=payinfo.APType)
+        app.logger.info(f"訂單付款失敗, 訂單編號:{payinfo.OrderNo} - {resp.Description}")
+        dbpm.UPD_Order_status_by_oid(ostatus=f"付款失敗-{resp.Description}", oid = payinfo.OrderNo)
+    else:
+        dbpm.UPD_payment_bytsno(ispaid=True, paytoken=resp.PayToken, tsno=payinfo.TSNo, aptype=payinfo.APType)
+        app.logger.info(f"訂單付款成功, 訂單編號:{payinfo.OrderNo} - {resp.Description}")
+        dbpm.UPD_Order_status_by_oid(ostatus=f"付款成功-{resp.Description}", oid = payinfo.OrderNo)
+```
+
+資料庫的控制，可以從[這裡](https://github.com/dekkmarsvin/it_ironman2021/blob/main/util/dbPm.py)找到，就不貼出來占版面了
+
+### 今天總結
+
+產生訂單有一些邏輯問題，也沒有rollback機制，有空必須要改改，看剩下還有幾天吧，今天大致跑完了主要功能，還有商品展示跟接上Line要做
