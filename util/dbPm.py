@@ -118,10 +118,10 @@ class DBPm:
         query = sql.SQL("INSERT INTO {}(uid, scid, createddate, paid, ostatus) VALUES (?, ?, ?, ?, ?, ?) RETURNING oid").format(sql.Identifier('orders'))
         cur.execute(query, )
 
-    def INS_payment_req(self, pty_type):
+    def INS_payment_req(self, pty_type, amount):
         cur = self.conn.cursor()
-        query = sql.SQL("INSERT INTO {}(type) VALUES (%s) RETURNING paid").format(sql.Identifier('payment_log'))
-        cur.execute(query, (pty_type,))
+        query = sql.SQL("INSERT INTO {}(type, amount) VALUES (%s, %s) RETURNING paid").format(sql.Identifier('payment_log'))
+        cur.execute(query, (pty_type, amount))
         paid = cur.fetchone()
         self.conn.commit()
         cur.close()
