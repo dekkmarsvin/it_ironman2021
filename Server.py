@@ -96,7 +96,7 @@ def handler_postback(event):
         app.logger.debug(f"{prof.display_name} 查詢購物車, uid:{event.source.user_id}")
         line_bot_api.reply_message(
             event.reply_token,
-            TextSendMessage(text=cart_info)
+            TextSendMessage(text="\n".join(cart_info))
         )
 
 @app.route('/')
