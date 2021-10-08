@@ -10,7 +10,7 @@ from util import GenApi
 from util import linecc
 
 dblist = ['cart_items', 'coupon', 'customers', 'messaging_log', 'orders', 'payment_log', 'product_category', 'products', 'shopping_cart']
-LineApiList = ['rich_menu_create', 'rich_menu_img_upload']
+LineApiList = ['rich_menu_create', 'rich_menu_img_upload', 'show_rich_menu_list']
 
 def askyes():
     val = input("Confirm to Do(Y/N):").lower()
@@ -293,7 +293,7 @@ def loadargs():
     add.set_defaults(func = doadd)
 
     line = subparsers.add_parser('line')
-    line.add_argument('target', choices=dblist, help='Line API功能')
+    line.add_argument('target', choices=LineApiList, help='Line API功能')
     line.add_argument('-y', '--yes', action='store_true', help='確認執行')
     line.set_defaults(func = doline)
     return parser.parse_args()
