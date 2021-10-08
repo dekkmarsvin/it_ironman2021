@@ -226,8 +226,7 @@ def add_upload_rich_menu_img(line_bot_api:LineBotApi, fp:str="./template/rm_01.p
     if(not isvalid):return False
     if(not yes):yes = askyes()
     if(not yes):return False
-    linecc.Upload_Rich_Menu(line_bot_api, fp, richmenuid)
-    return True
+    return linecc.Upload_Rich_Menu(line_bot_api, fp, richmenuid)
 
 def init_default_rich_menu(line_bot_api:LineBotApi, yes=False):
     if(not yes):yes = askyes()
