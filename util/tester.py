@@ -215,10 +215,10 @@ def doadd(dbpm:DBPm, args):
     if(r):print("成功")
     else:print("失敗")
 
-def add_upload_rich_menu_img(line_bot_api:LineBotApi, fp:str='template\rm_01.png', yes=False):
+def add_upload_rich_menu_img(line_bot_api:LineBotApi, fp:str="./template/rm_01.png", yes=False):
     richmenuid = input("RichMenuId:")
     if(not richmenuid):return False
-    fp = input("Default({fp}) or Enter:") or fp
+    fp = input(f"Default({fp}) or Enter:") or fp
     isvalid = os.path.exists(fp)
     print(f"Try load rich menu image from {fp}.....{isvalid}")
     if(not isvalid):return False
