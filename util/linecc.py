@@ -123,6 +123,7 @@ def Upload_Rich_Menu(line_bot_api:LineBotApi, file_path, rich_menu_id):
     elif(extension == 'png'):
         content_type = 'image/png'
     else:
+        print(f"副檔名不正確", extension)
         return False
     with open(file_path, 'rb') as f:
         print(f)
