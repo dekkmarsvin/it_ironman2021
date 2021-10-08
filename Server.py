@@ -11,7 +11,7 @@ from linebot.exceptions import (
     InvalidSignatureError
 )
 from linebot.models import (
-    MessageEvent, TextMessage, TextSendMessage
+    MessageEvent, TextMessage, TextSendMessage, PostbackEvent
 )
 import os
 from linebot.models.events import FollowEvent
@@ -85,6 +85,19 @@ def handle_message(event):
     line_bot_api.reply_message(
         event.reply_token,
         TextSendMessage(text=event.message.text))
+
+@handler.add(PostbackEvent)
+def handler_postback(event):
+    prof = line_bot_api.get_profile(event.source.user_id)
+    data = event.postback.data
+    print(f"data:{data}")
+    if(data == 'action=ShowShoppingCartContents'):
+        cart_info = dbpm.QUY_Shopping_Cart_info_by_uid(event.source.user_id)
+        app.logger.debug(f"{prof.display_name} 查詢購物車, uid:{event.source.user_id}")
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=cart_info)
+        )
 
 @app.route('/')
 def default_route():

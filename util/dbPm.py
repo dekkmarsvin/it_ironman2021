@@ -251,3 +251,19 @@ class DBPm:
         cur.execute(query, (ostatus, oid))
         self.conn.commit()
         cur.close()
+
+    def QUY_Shopping_Cart_info_by_uid(self, uid):
+        scid = self.INS_QUY_SC(uid)
+
+        prodlist = []
+        tot_price = 0
+
+        shopping_list = self.QUY_Shopping_Cart_by_scid(scid)
+        if(not shopping_list):
+            return False
+        for prod in shopping_list:
+            product_name, product_price = self.QUY_Prod_Name_and_Price_by_pid(prod[0])
+            prodlist.append(f"{product_name} * {prod[1]}")
+            tot_price = tot_price + product_price * prod[1]
+
+        return prodlist, tot_price
