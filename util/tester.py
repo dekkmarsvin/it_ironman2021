@@ -1,10 +1,16 @@
 import argparse
 import os
+from linebot import LineBotApi
+from linebot.models import (
+    RichMenu, RichMenuArea, RichMenuResponse, RichMenuSize, RichMenuBounds, URITemplateAction, URIAction
+)
 from dbPm import DBPm
 from util import APIModel
 from util import GenApi
+from util import linecc
 
 dblist = ['cart_items', 'coupon', 'customers', 'messaging_log', 'orders', 'payment_log', 'product_category', 'products', 'shopping_cart']
+LineApiList = ['rich_menu_create', 'rich_menu_img_upload']
 
 def askyes():
     val = input("Confirm to Do(Y/N):").lower()
@@ -209,6 +215,68 @@ def doadd(dbpm:DBPm, args):
     if(r):print("成功")
     else:print("失敗")
 
+def add_upload_rich_menu_img(line_bot_api:LineBotApi, fp:str='template\rm_01.png', yes=False):
+    richmenuid = int(input("RichMenuId:"))
+    if(not richmenuid):return False
+    fp = input("Default({fp}) or Enter:") or fp
+    isvalid = os.path.exists(fp)
+    print(f"Try load rich menu image from {fp}.....{isvalid}")
+    if(not isvalid):return False
+    if(not yes):yes = askyes()
+    if(not yes):return False
+    linecc.Upload_Rich_Menu(line_bot_api, fp, richmenuid)
+
+def init_default_rich_menu(line_bot_api:LineBotApi, yes=False):
+    if(not yes):yes = askyes()
+    if(not yes):return False
+    areas = [RichMenuArea(
+                bounds=RichMenuBounds(x=0, y=0, width=512, height=512),
+                action=URIAction(label='Go to line.me', uri='https://line.me')
+            ),
+            RichMenuArea(
+                bounds=RichMenuBounds(x=512, y=0, width=512, height=512),
+                action=URIAction(label='Go to line.me', uri='https://line.me')
+            ),
+            RichMenuArea(
+                bounds=RichMenuBounds(x=1024, y=0, width=512, height=512),
+                action=URIAction(label='Go to line.me', uri='https://line.me')
+            ),
+            RichMenuArea(
+                bounds=RichMenuBounds(x=0, y=512, width=512, height=512),
+                action=URIAction(label='Go to line.me', uri='https://line.me')
+            ),
+            RichMenuArea(
+                bounds=RichMenuBounds(x=512, y=512, width=512, height=512),
+                action=URIAction(label='Go to line.me', uri='https://line.me')
+            ),
+            RichMenuArea(
+                bounds=RichMenuBounds(x=1024, y=512, width=512, height=512),
+                action=URIAction(label='Go to line.me', uri='https://line.me')
+            ),
+        ]
+    richmenuid = linecc.Create_Rich_Menu(line_bot_api, 1536, 1024, "default_Rich_Menu", "主選單", areas)
+    print(f"rich_menu_id :{richmenuid}")
+
+def info_get_rich_menu_list(line_bot_api:LineBotApi):
+    rich_menu_list = linecc.get_rich_menu_list(line_bot_api)
+    print(rich_menu_list)
+    if(rich_menu_list):return True
+    else:return False
+
+def doline(dbpm:DBPm, args):
+    line_bot_api = LineBotApi(os.environ['LCAT'])
+    if(args.target == 'rich_menu_create'):
+        print("以預設值建立新的Rich Menu")
+        r = init_default_rich_menu(line_bot_api=line_bot_api, yes=args.yes)
+    elif(args.target == 'rich_menu_img_upload'):
+        print("上傳Rich Menu 圖片")
+        r = add_upload_rich_menu_img(line_bot_api=line_bot_api, yes=args.yes)
+    elif(args.target == 'show_rich_menu_list'):
+        print("顯示Rich Menu列表")
+        r = info_get_rich_menu_list(line_bot_api=line_bot_api)
+    if(r):print("成功")
+    else:print("失敗")
+
 def loadargs():
     parser = argparse.ArgumentParser()
     
@@ -223,6 +291,11 @@ def loadargs():
     add.add_argument('target', choices=dblist, help='新增紀錄')
     add.add_argument('-y', '--yes', action='store_true', help='確認執行')
     add.set_defaults(func = doadd)
+
+    line = subparsers.add_parser('line')
+    line.add_argument('target', choices=dblist, help='Line API功能')
+    line.add_argument('-y', '--yes', action='store_true', help='確認執行')
+    line.set_defaults(func = doline)
     return parser.parse_args()
 
 args = loadargs()

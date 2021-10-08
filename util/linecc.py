@@ -1,10 +1,15 @@
 from configparser import ConfigParser
-
 from requests.models import Response
 import jwt
 from jwt.algorithms import RSAAlgorithm
 import time
 import json
+from linebot import LineBotApi
+from linebot.models import (
+    RichMenu, RichMenuArea, RichMenuResponse, RichMenuSize, RichMenuBounds, URITemplateAction, URIAction
+)
+import os
+
 import APIPm
 
 def GenJWT(cfg):
@@ -100,15 +105,44 @@ def Send_push_message(token, IDs):
     resp = APIPm.sendreq(url=url, headers=headers, data=json.dumps(data, indent=4))
     return jsonresphandler(resp)
 
+def Create_Rich_Menu(line_bot_api:LineBotApi, image_width:int, image_height:int, name:str, char_bar_text:str, richmenuarea):
+    rich_menu_to_create = RichMenu(
+        size=RichMenuSize(width=image_width, height=image_height),
+        selected=False,
+        name=name,
+        chat_bar_text=char_bar_text,
+        areas=richmenuarea
+    )
+    rich_menu_id = line_bot_api.create_rich_menu(rich_menu=rich_menu_to_create)
+    return rich_menu_id
+
+def Upload_Rich_Menu(line_bot_api:LineBotApi, file_path, rich_menu_id):
+    extension = os.path.splitext(file_path)[1]
+    if(extension == 'jpg' or extension == 'jpeg'):
+        content_type = 'image/jpeg'
+    elif(extension == 'png'):
+        content_type = 'image/png'
+    else:
+        return False
+    with open(file_path, 'rb') as f:
+        line_bot_api.set_rich_menu_image(rich_menu_id, content_type, f)
+    return True
+
+def get_rich_menu_list(line_bot_api:LineBotApi, timeout=None):
+    rich_menu_list = line_bot_api.get_rich_menu_list(timeout=timeout)
+    return rich_menu_list
+
 if __name__ == '__main__':
-    env = ConfigParser(allow_no_value=True)
-    env.read('env.ini')
-    cfg = env._sections['Line']
+    # env = ConfigParser(allow_no_value=True)
+    # env.read('env.ini')
+    # cfg = env._sections['Line']
     # JWT = GenJWT(cfg)
     # print(f"JWT:{JWT}")
     # isSucc, token = Issue_channel_access_token(JWT)
     # print(token)
     # isSucc, kids = Get_all_valid_channel_access_token_key_IDs(JWT)
     # print(kids)
-    token = {'access_token': 'eyJhbGciOiJIUzI1NiJ9.rCPxHhzPh9a695jVnlvWBuWTwCmIQZZU2gXp0BP6be70wIkDG1Hm_SXP39__uBTlhUDHea7l4aXeqK8e9udgyIskq4-qNx2lGWLwiTPENhahBuJOGYPWT6RXlpaKb9Ee.w8yew-gqmnXqg56W2GXWYltLQNpoJLERBvv4D-9P_pY', 'token_type': 'Bearer', 'expires_in': 1800, 'key_id': 'YWtMca9HrnOYS93ibBYF8Q'}
-    print(Send_push_message(token, cfg['me']))
+    # token = {'access_token': 'eyJhbGciOiJIUzI1NiJ9.rCPxHhzPh9a695jVnlvWBuWTwCmIQZZU2gXp0BP6be70wIkDG1Hm_SXP39__uBTlhUDHea7l4aXeqK8e9udgyIskq4-qNx2lGWLwiTPENhahBuJOGYPWT6RXlpaKb9Ee.w8yew-gqmnXqg56W2GXWYltLQNpoJLERBvv4D-9P_pY', 'token_type': 'Bearer', 'expires_in': 1800, 'key_id': 'YWtMca9HrnOYS93ibBYF8Q'}
+    # print(Send_push_message(token, cfg['me']))
+
+    print()
