@@ -93,10 +93,11 @@ def handler_postback(event):
     print(f"data:{data}")
     if(data == 'action=ShowShoppingCartContents'):
         cart_info = dbpm.QUY_Shopping_Cart_info_by_uid(event.source.user_id)
-        app.logger.debug(f"{prof.display_name} 查詢購物車, uid:{event.source.user_id}")
+        replay_text = "\n".join(cart_info)
+        app.logger.debug(f"{prof.display_name} 查詢購物車, uid:{event.source.user_id}, {replay_text}")
         line_bot_api.reply_message(
             event.reply_token,
-            TextSendMessage(text="\n".join(cart_info))
+            TextSendMessage(text=replay_text)
         )
 
 @app.route('/')
