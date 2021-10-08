@@ -126,7 +126,6 @@ def Upload_Rich_Menu(line_bot_api:LineBotApi, file_path, rich_menu_id):
         print(f"副檔名不正確", extension)
         return False
     with open(file_path, 'rb') as f:
-        print(f)
         line_bot_api.set_rich_menu_image(rich_menu_id, content_type, f)
     return True
 
