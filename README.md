@@ -104,6 +104,12 @@
   - [[day25] 建立訂單 & 付款處理](#day25-建立訂單--付款處理)
     - [實作完整訂單流程](#實作完整訂單流程)
     - [今天總結](#今天總結)
+  - [[day26] 從Line查詢購物車(Rich Menu & Postback)](#day26-從line查詢購物車rich-menu--postback)
+    - [建立Line Rich Menu](#建立line-rich-menu)
+      - [實作](#實作)
+    - [查詢購物車Line串接](#查詢購物車line串接)
+      - [實作](#實作-1)
+    - [結果展示](#結果展示)
 
 ## [Day1] 金融支付API
 
@@ -2735,3 +2741,195 @@ def OrderPayQueryHandler(resp:APIModel.ResOrderPayQuery):
 ### 今天總結
 
 產生訂單有一些邏輯問題，也沒有rollback機制，有空必須要改改，看剩下還有幾天吧，今天大致跑完了主要功能，還有商品展示跟接上Line要做
+
+## [day26] 從Line查詢購物車(Rich Menu & Postback)
+
+![Rich Menu](/template/rm_01.png)
+
+由左到右，由上至下，分別是
+
+1. 早餐選單按鈕
+2. 午餐選單按鈕
+3. 飲料選單按鈕
+4. 使用說明按鈕
+5. 查詢購物車內容按鈕
+6. 查詢訂單按鈕
+
+時間越來越不夠了0rz
+
+### 建立Line Rich Menu
+
+建立Rich Menu模板，取得Rich MenuID，上傳圖片至Line，將圖片與RichMenu綁定，將該Rich Menu設定為預設
+
+#### 實作
+
+tester.py
+
+```python
+def doline(dbpm:DBPm, args):
+    line_bot_api = LineBotApi(os.environ['LCAT'])
+    if(args.target == 'rich_menu_create'):
+        print("以預設值建立新的Rich Menu")
+        r = init_default_rich_menu(line_bot_api=line_bot_api, yes=args.yes)
+    elif(args.target == 'rich_menu_img_upload'):
+        print("上傳Rich Menu 圖片")
+        r = add_upload_rich_menu_img(line_bot_api=line_bot_api, yes=args.yes)
+    elif(args.target == 'show_rich_menu_list'):
+        print("顯示Rich Menu列表")
+        r = info_get_rich_menu_list(line_bot_api=line_bot_api)
+    elif(args.target == 'get_default_rich_menu'):
+        print("顯示預設Rich Menu")
+        r = info_get_default_rich_menu(line_bot_api=line_bot_api)
+    elif(args.target == 'set_default_rich_menu'):
+        print("設定預設的Rich Menu")
+        r = add_set_default_rich_menu(line_bot_api = line_bot_api, yes=args.yes)
+    elif(args.target == 'cancel_default_rich_menu'):
+        print("取消預設的Rich Menu")
+        r = del_cancel_default_rich_menu(line_bot_api=line_bot_api, yes=args.yes)
+    elif(args.target == 'delete_rich_menu'):
+        print("刪除Rich Menu")
+        r = del_delete_rich_menu(line_bot_api=line_bot_api, yes=args.yes)
+    if(r):print("成功")
+    else:print("失敗")
+
+def init_default_rich_menu(line_bot_api:LineBotApi, yes=False):
+    if(not yes):yes = askyes()
+    if(not yes):return False
+    areas = [RichMenuArea(
+                bounds=RichMenuBounds(x=0, y=0, width=512, height=512),
+                action=URIAction(label='Go to line.me', uri='https://line.me')
+            ),
+            RichMenuArea(
+                bounds=RichMenuBounds(x=512, y=0, width=512, height=512),
+                action=URIAction(label='Go to line.me', uri='https://line.me')
+            ),
+            RichMenuArea(
+                bounds=RichMenuBounds(x=1024, y=0, width=512, height=512),
+                action=URIAction(label='Go to line.me', uri='https://line.me')
+            ),
+            RichMenuArea(
+                bounds=RichMenuBounds(x=0, y=512, width=512, height=512),
+                action=MessageAction(label="按下問號按鈕", text="顯示操作說明")
+            ),
+            RichMenuArea(
+                bounds=RichMenuBounds(x=512, y=512, width=512, height=512),
+                action=PostbackAction(
+                    label="顯示購物車內容",
+                    data="action=ShowShoppingCartContents",
+                    display_text="我的購物車內有什麼"
+                )
+            ),
+            RichMenuArea(
+                bounds=RichMenuBounds(x=1024, y=512, width=512, height=512),
+                action=PostbackAction(
+                    label="查詢訂單",
+                    data="action=ShowOrderStatus",
+                    display_text="查詢訂單"
+                )            
+            )
+        ]
+    richmenuid = linecc.Create_Rich_Menu(line_bot_api, 1536, 1024, "default_Rich_Menu", "主選單", areas)
+    print(f"rich_menu_id :{richmenuid}")
+    if(richmenuid):return True
+    else:return False
+
+def add_upload_rich_menu_img(line_bot_api:LineBotApi, fp:str="./template/rm_01.png", yes=False):
+    richmenuid = input("RichMenuId:")
+    if(not richmenuid):return False
+    fp = input(f"Default({fp}) or Enter:") or fp
+    isvalid = os.path.exists(fp)
+    print(f"Try load rich menu image from {fp}.....{isvalid}")
+    if(not isvalid):return False
+    if(not yes):yes = askyes()
+    if(not yes):return False
+    return linecc.Upload_Rich_Menu(line_bot_api, fp, richmenuid)
+
+def add_set_default_rich_menu(line_bot_api:LineBotApi, timeout=None, yes=False):
+    rich_menu_id = input("Rich Menu ID:")
+    if(not yes):yes = askyes()
+    if(not yes):return False
+    line_bot_api.set_default_rich_menu(rich_menu_id)
+    return True
+```
+
+linecc.py
+
+```python
+def Upload_Rich_Menu(line_bot_api:LineBotApi, file_path, rich_menu_id):
+    extension = os.path.splitext(file_path)[1]
+    if(extension == '.jpg' or extension == '.jpeg'):
+        content_type = 'image/jpeg'
+    elif(extension == '.png'):
+        content_type = 'image/png'
+    else:
+        print(f"副檔名不正確", extension)
+        return False
+    with open(file_path, 'rb') as f:
+        line_bot_api.set_rich_menu_image(rich_menu_id, content_type, f)
+    return True
+
+def get_rich_menu_list(line_bot_api:LineBotApi, timeout=None):
+    rich_menu_list = line_bot_api.get_rich_menu_list(timeout=timeout)
+    return rich_menu_list
+
+def Create_Rich_Menu(line_bot_api:LineBotApi, image_width:int, image_height:int, name:str, char_bar_text:str, richmenuarea):
+    rich_menu_to_create = RichMenu(
+        size=RichMenuSize(width=image_width, height=image_height),
+        selected=False,
+        name=name,
+        chat_bar_text=char_bar_text,
+        areas=richmenuarea
+    )
+    rich_menu_id = line_bot_api.create_rich_menu(rich_menu=rich_menu_to_create)
+    return rich_menu_id
+```
+
+### 查詢購物車Line串接
+
+處理PostBack Evevnt，查詢資料庫，傳送給使用者
+
+#### 實作
+
+Server.py
+
+```python
+@handler.add(PostbackEvent)
+def handler_postback(event):
+    prof = line_bot_api.get_profile(event.source.user_id)
+    data = event.postback.data
+    print(f"data:{data}")
+    if(data == 'action=ShowShoppingCartContents'):
+        cart_info, cart_amount = dbpm.QUY_Shopping_Cart_info_by_uid(event.source.user_id)
+        app.logger.debug(f"{prof.display_name} 查詢購物車, uid:{event.source.user_id}, {cart_info}")
+        replay_text = '\n'.join(str(v) for v in cart_info) + f"\n總共:{cart_amount}元"
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=replay_text)
+        )
+```
+
+dbpm.py
+
+```python
+def QUY_Shopping_Cart_info_by_uid(self, uid):
+    scid = self.INS_QUY_SC(uid)
+
+    prodlist = []
+    tot_price = 0
+
+    shopping_list = self.QUY_Shopping_Cart_by_scid(scid)
+    if(not shopping_list):
+        return False
+    for prod in shopping_list:
+        product_name, product_price = self.QUY_Prod_Name_and_Price_by_pid(prod[0])
+        prodlist.append(f"{product_name} * {prod[1]}")
+        tot_price = tot_price + product_price * prod[1]
+
+    return prodlist, tot_price
+```
+
+### 結果展示
+
+![Ask Robot Shopping Cart](readme/d26-01.png)
+
+加速趕工中，接下來還有從Line進行購物車內容物加減，查訂單
