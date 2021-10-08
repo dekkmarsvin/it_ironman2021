@@ -216,7 +216,7 @@ def doadd(dbpm:DBPm, args):
     else:print("失敗")
 
 def add_upload_rich_menu_img(line_bot_api:LineBotApi, fp:str='template\rm_01.png', yes=False):
-    richmenuid = int(input("RichMenuId:"))
+    richmenuid = input("RichMenuId:")
     if(not richmenuid):return False
     fp = input("Default({fp}) or Enter:") or fp
     isvalid = os.path.exists(fp)
@@ -256,6 +256,8 @@ def init_default_rich_menu(line_bot_api:LineBotApi, yes=False):
         ]
     richmenuid = linecc.Create_Rich_Menu(line_bot_api, 1536, 1024, "default_Rich_Menu", "主選單", areas)
     print(f"rich_menu_id :{richmenuid}")
+    if(richmenuid):return True
+    else:return False
 
 def info_get_rich_menu_list(line_bot_api:LineBotApi):
     rich_menu_list = linecc.get_rich_menu_list(line_bot_api)
