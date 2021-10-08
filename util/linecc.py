@@ -118,9 +118,9 @@ def Create_Rich_Menu(line_bot_api:LineBotApi, image_width:int, image_height:int,
 
 def Upload_Rich_Menu(line_bot_api:LineBotApi, file_path, rich_menu_id):
     extension = os.path.splitext(file_path)[1]
-    if(extension == 'jpg' or extension == 'jpeg'):
+    if(extension == '.jpg' or extension == '.jpeg'):
         content_type = 'image/jpeg'
-    elif(extension == 'png'):
+    elif(extension == '.png'):
         content_type = 'image/png'
     else:
         print(f"副檔名不正確", extension)
