@@ -1,5 +1,6 @@
 import argparse
 import os
+from re import L
 from linebot import LineBotApi
 from linebot.models import (
     RichMenu, RichMenuArea, RichMenuResponse, RichMenuSize, RichMenuBounds, URITemplateAction, URIAction
@@ -10,7 +11,8 @@ from util import GenApi
 from util import linecc
 
 dblist = ['cart_items', 'coupon', 'customers', 'messaging_log', 'orders', 'payment_log', 'product_category', 'products', 'shopping_cart']
-LineApiList = ['rich_menu_create', 'rich_menu_img_upload', 'show_rich_menu_list']
+LineApiList = ['rich_menu_create', 'rich_menu_img_upload', 'show_rich_menu_list', 'set_default_rich_menu', 'cancel_default_rich_menu', \
+            'get_default_rich_menu']
 
 def askyes():
     val = input("Confirm to Do(Y/N):").lower()
@@ -266,11 +268,16 @@ def info_get_rich_menu_list(line_bot_api:LineBotApi):
     if(rich_menu_list):return True
     else:return False
 
-def add_set_default_rich_menu(line_bot_api:LineBotApi, rich_menu_id, timeout=None):
+def add_set_default_rich_menu(line_bot_api:LineBotApi, timeout=None, yes=False):
+    rich_menu_id = input("Rich Menu ID:")
+    if(not yes):yes = askyes()
+    if(not yes):return False
     line_bot_api.set_default_rich_menu(rich_menu_id)
     return True
 
-def del_cancel_default_rich_menu(line_bot_api:LineBotApi, timeout=None):
+def del_cancel_default_rich_menu(line_bot_api:LineBotApi, timeout=None, yes=False):
+    if(not yes):yes = askyes()
+    if(not yes):return False
     line_bot_api.cancel_default_rich_menu()
     return True
 
@@ -292,6 +299,14 @@ def doline(dbpm:DBPm, args):
     elif(args.target == 'show_rich_menu_list'):
         print("顯示Rich Menu列表")
         r = info_get_rich_menu_list(line_bot_api=line_bot_api)
+    elif(args.target == 'get_default_rich_menu'):
+        print("顯示預設Rich Menu")
+        r = info_get_default_rich_menu(line_bot_api=line_bot_api)
+    elif(args.target == 'set_default_rich_menu'):
+        print("設定預設的Rich Menu")
+        r = add_set_default_rich_menu(line_bot_api = line_bot_api, yes=args.yes)
+    elif(args.target == 'cancel_default_rich_menu'):
+        r = del_cancel_default_rich_menu(line_bot_api=line_bot_api, yes=args.yes)
     if(r):print("成功")
     else:print("失敗")
 
