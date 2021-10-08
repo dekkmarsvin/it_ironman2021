@@ -92,9 +92,9 @@ def handler_postback(event):
     data = event.postback.data
     print(f"data:{data}")
     if(data == 'action=ShowShoppingCartContents'):
-        cart_info = dbpm.QUY_Shopping_Cart_info_by_uid(event.source.user_id)
+        cart_info, cart_amount = dbpm.QUY_Shopping_Cart_info_by_uid(event.source.user_id)
         app.logger.debug(f"{prof.display_name} 查詢購物車, uid:{event.source.user_id}, {cart_info}")
-        replay_text = '\n'.join(str(v) for v in cart_info)
+        replay_text = '\n'.join(str(v) for v in cart_info) + f"\n總共:{cart_amount}元"
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(text=replay_text)
