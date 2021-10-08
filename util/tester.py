@@ -3,7 +3,7 @@ import os
 from re import L
 from linebot import LineBotApi
 from linebot.models import (
-    RichMenu, RichMenuArea, RichMenuResponse, RichMenuSize, RichMenuBounds, URITemplateAction, URIAction
+    RichMenu, RichMenuArea, RichMenuResponse, RichMenuSize, RichMenuBounds, URITemplateAction, URIAction, PostbackAction, MessageAction
 )
 from dbPm import DBPm
 from util import APIModel
@@ -12,7 +12,7 @@ from util import linecc
 
 dblist = ['cart_items', 'coupon', 'customers', 'messaging_log', 'orders', 'payment_log', 'product_category', 'products', 'shopping_cart']
 LineApiList = ['rich_menu_create', 'rich_menu_img_upload', 'show_rich_menu_list', 'set_default_rich_menu', 'cancel_default_rich_menu', \
-            'get_default_rich_menu']
+            'get_default_rich_menu', 'delete_rich_menu']
 
 def askyes():
     val = input("Confirm to Do(Y/N):").lower()
@@ -245,16 +245,24 @@ def init_default_rich_menu(line_bot_api:LineBotApi, yes=False):
             ),
             RichMenuArea(
                 bounds=RichMenuBounds(x=0, y=512, width=512, height=512),
-                action=URIAction(label='Go to line.me', uri='https://line.me')
+                action=MessageAction(label="按下問號按鈕", text="顯示操作說明")
             ),
             RichMenuArea(
                 bounds=RichMenuBounds(x=512, y=512, width=512, height=512),
-                action=URIAction(label='Go to line.me', uri='https://line.me')
+                action=PostbackAction(
+                    label="顯示購物車內容",
+                    data="action=ShowShoppingCartContents",
+                    display_text="我的購物車內有什麼"
+                )
             ),
             RichMenuArea(
                 bounds=RichMenuBounds(x=1024, y=512, width=512, height=512),
-                action=URIAction(label='Go to line.me', uri='https://line.me')
-            ),
+                action=PostbackAction(
+                    label="查詢訂單",
+                    data="action=ShowOrderStatus",
+                    display_text="查詢訂單"
+                )            
+            )
         ]
     richmenuid = linecc.Create_Rich_Menu(line_bot_api, 1536, 1024, "default_Rich_Menu", "主選單", areas)
     print(f"rich_menu_id :{richmenuid}")
@@ -272,6 +280,13 @@ def add_set_default_rich_menu(line_bot_api:LineBotApi, timeout=None, yes=False):
     if(not yes):yes = askyes()
     if(not yes):return False
     line_bot_api.set_default_rich_menu(rich_menu_id)
+    return True
+
+def del_delete_rich_menu(line_bot_api:LineBotApi, timeout=None, yes=False):
+    rich_menu_id = input("Rich Menu ID:")
+    if(not yes):yes = askyes()
+    if(not yes):return False
+    line_bot_api.delete_rich_menu(rich_menu_id)
     return True
 
 def del_cancel_default_rich_menu(line_bot_api:LineBotApi, timeout=None, yes=False):
@@ -305,7 +320,11 @@ def doline(dbpm:DBPm, args):
         print("設定預設的Rich Menu")
         r = add_set_default_rich_menu(line_bot_api = line_bot_api, yes=args.yes)
     elif(args.target == 'cancel_default_rich_menu'):
+        print("取消預設的Rich Menu")
         r = del_cancel_default_rich_menu(line_bot_api=line_bot_api, yes=args.yes)
+    elif(args.target == 'delete_rich_menu'):
+        print("刪除Rich Menu")
+        r = del_delete_rich_menu(line_bot_api=line_bot_api, yes=args.yes)
     if(r):print("成功")
     else:print("失敗")
 
