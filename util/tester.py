@@ -225,6 +225,7 @@ def add_upload_rich_menu_img(line_bot_api:LineBotApi, fp:str="./template/rm_01.p
     if(not yes):yes = askyes()
     if(not yes):return False
     linecc.Upload_Rich_Menu(line_bot_api, fp, richmenuid)
+    return True
 
 def init_default_rich_menu(line_bot_api:LineBotApi, yes=False):
     if(not yes):yes = askyes()
@@ -264,6 +265,21 @@ def info_get_rich_menu_list(line_bot_api:LineBotApi):
     print(rich_menu_list)
     if(rich_menu_list):return True
     else:return False
+
+def add_set_default_rich_menu(line_bot_api:LineBotApi, rich_menu_id, timeout=None):
+    line_bot_api.set_default_rich_menu(rich_menu_id)
+    return True
+
+def del_cancel_default_rich_menu(line_bot_api:LineBotApi, timeout=None):
+    line_bot_api.cancel_default_rich_menu()
+    return True
+
+def info_get_default_rich_menu(line_bot_api:LineBotApi, timeout=None):
+    rmid = line_bot_api.get_default_rich_menu()
+    if(rmid):
+        print(f"default rich menuid:{rmid}")
+        return True
+    return False
 
 def doline(dbpm:DBPm, args):
     line_bot_api = LineBotApi(os.environ['LCAT'])
