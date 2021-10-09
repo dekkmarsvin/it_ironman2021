@@ -90,7 +90,7 @@ def handle_message(event):
 def handler_postback(event):
     prof = line_bot_api.get_profile(event.source.user_id)
     data = event.postback.data
-    app.logger.debug(f"data:{data}")
+    # app.logger.debug(f"data:{data}")
     if(data == 'action=ShowShoppingCartContents'):
         cart_info, cart_amount = dbpm.QUY_Shopping_Cart_info_by_uid(event.source.user_id)
         app.logger.debug(f"{prof.display_name} 查詢購物車, uid:{event.source.user_id}, {cart_info}")
@@ -103,7 +103,7 @@ def handler_postback(event):
         from urllib.parse import urlparse, parse_qs
         datapath = urlparse(data).path
         datavalue = parse_qs(urlparse(data).query)
-        app.logger.debug(f"data.path = {datapath}, datavalue = {datavalue}")
+        # app.logger.debug(f"data.path = {datapath}, datavalue = {datavalue}")
         if(datapath == "action=ShowProductList"):
             pcid = datavalue.get('pcid')[0] or None
             if(not pcid):
@@ -114,7 +114,7 @@ def handler_postback(event):
                 )
             else:
                 replay_text = Handler.ShowProductListHandler(pcid) or "錯誤:action=ShowProductList Return None"
-                app.logger.debug(f"replay_text:{replay_text}")
+                # app.logger.debug(f"replay_text:{replay_text}")
                 line_bot_api.reply_message(
                     event.reply_token,
                     TextSendMessage(text=replay_text)
