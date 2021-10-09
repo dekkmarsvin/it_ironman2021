@@ -26,9 +26,9 @@ def OrderPayQueryHandler(resp:APIModel.ResOrderPayQuery):
 
 def ShowProductListHandler(pcid):
     prod_list = dbpm.QUY_Products_info_by_pcid(pcid=pcid)
+    app.logger.debug(f"prod_list:{prod_list}")
     if(not prod_list):return None
 
-    app.logger.debug(f"prod_list:{prod_list}")
     info_list = []
     for prod in prod_list:
         info_list.append(f"{prod[0]}\n{prod[1]}\n庫存:{prod[2]}\t售價:{prod[3]}\t訂購代號:{prod[4]}")

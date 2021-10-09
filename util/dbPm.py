@@ -269,10 +269,12 @@ class DBPm:
         return prodlist, tot_price
 
     def QUY_Products_info_by_pcid(self, pcid):
-        prodlist = []
-
         cur = self.conn.cursor()
-        query = sql.SQL("SELECT product_name, quantity, product_decp FROM {} WHERE categoryid = %s").format(sql.Identifier('products'))
+        query = sql.SQL("SELECT product_name, product_decp, quantity, price, pid FROM {} WHERE categoryid = %s").format(sql.Identifier('products'))
         cur.execute(query, (pcid,))
         prods = cur.fetchall()
         cur.close()
+
+        if(prods):
+            return list(map(list, prods))
+        return None
