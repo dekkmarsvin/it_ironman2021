@@ -113,7 +113,8 @@ def handler_postback(event):
                     TextSendMessage(text=f"發生錯誤，請聯絡客服取得協助, 錯誤訊息:找不到pcid:{pcid}")
                 )
             else:
-                replay_text = Handler.ShowProductListHandler(pcid)
+                replay_text = Handler.ShowProductListHandler(pcid) or "錯誤:action=ShowProductList Return None"
+                app.logger.debug(f"replay_text:{replay_text}")
                 line_bot_api.reply_message(
                     event.reply_token,
                     TextSendMessage(text=replay_text)
