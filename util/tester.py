@@ -233,15 +233,27 @@ def init_default_rich_menu(line_bot_api:LineBotApi, yes=False):
     if(not yes):return False
     areas = [RichMenuArea(
                 bounds=RichMenuBounds(x=0, y=0, width=512, height=512),
-                action=URIAction(label='Go to line.me', uri='https://line.me')
+                action=PostbackAction(
+                    label="顯示購物車內容",
+                    data="action=ShowProductList?pcid=16",
+                    display_text="查詢早餐"
+                )
             ),
             RichMenuArea(
                 bounds=RichMenuBounds(x=512, y=0, width=512, height=512),
-                action=URIAction(label='Go to line.me', uri='https://line.me')
+                action=PostbackAction(
+                    label="顯示購物車內容",
+                    data="action=ShowProductList?pcid=17",
+                    display_text="查詢午餐"
+                )
             ),
             RichMenuArea(
                 bounds=RichMenuBounds(x=1024, y=0, width=512, height=512),
-                action=URIAction(label='Go to line.me', uri='https://line.me')
+                action=PostbackAction(
+                    label="顯示購物車內容",
+                    data="action=ShowProductList?pcid=10",
+                    display_text="查詢飲料"
+                )
             ),
             RichMenuArea(
                 bounds=RichMenuBounds(x=0, y=512, width=512, height=512),
