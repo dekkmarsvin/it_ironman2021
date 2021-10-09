@@ -110,6 +110,9 @@
     - [查詢購物車Line串接](#查詢購物車line串接)
       - [實作](#實作-1)
     - [結果展示](#結果展示)
+  - [[day27] PostBack資料data處理 顯示菜單](#day27-postback資料data處理-顯示菜單)
+    - [實作PostBack Action參數傳遞](#實作postback-action參數傳遞)
+    - [d27總結](#d27總結)
 
 ## [Day1] 金融支付API
 
@@ -2933,3 +2936,156 @@ def QUY_Shopping_Cart_info_by_uid(self, uid):
 ![Ask Robot Shopping Cart](readme/d26-01.png)
 
 加速趕工中，接下來還有從Line進行購物車內容物加減，查訂單
+
+## [day27] PostBack資料data處理 顯示菜單
+
+對PostBack Event中的字串進行處理，由於這個參數僅能放入字串，所以可以套用網頁Query的方式進行參數傳遞
+
+### 實作PostBack Action參數傳遞
+
+先替之前的Rich Menu加上功能，將上方選單的三個按鈕，改成PostBackAction，data="action=ShowProductList?pcid={餐點類別ID}}"
+
+```python
+def init_default_rich_menu(line_bot_api:LineBotApi, yes=False):
+    if(not yes):yes = askyes()
+    if(not yes):return False
+    areas = [RichMenuArea(
+                bounds=RichMenuBounds(x=0, y=0, width=512, height=512),
+                action=PostbackAction(
+                    label="顯示購物車內容",
+                    data="action=ShowProductList?pcid=16",
+                    display_text="查詢早餐"
+                )
+            ),
+            RichMenuArea(
+                bounds=RichMenuBounds(x=512, y=0, width=512, height=512),
+                action=PostbackAction(
+                    label="顯示購物車內容",
+                    data="action=ShowProductList?pcid=17",
+                    display_text="查詢午餐"
+                )
+            ),
+            RichMenuArea(
+                bounds=RichMenuBounds(x=1024, y=0, width=512, height=512),
+                action=PostbackAction(
+                    label="顯示購物車內容",
+                    data="action=ShowProductList?pcid=10",
+                    display_text="查詢飲料"
+                )
+            ),
+            RichMenuArea(
+                bounds=RichMenuBounds(x=0, y=512, width=512, height=512),
+                action=MessageAction(label="按下問號按鈕", text="顯示操作說明")
+            ),
+            RichMenuArea(
+                bounds=RichMenuBounds(x=512, y=512, width=512, height=512),
+                action=PostbackAction(
+                    label="顯示購物車內容",
+                    data="action=ShowShoppingCartContents",
+                    display_text="我的購物車內有什麼"
+                )
+            ),
+            RichMenuArea(
+                bounds=RichMenuBounds(x=1024, y=512, width=512, height=512),
+                action=PostbackAction(
+                    label="查詢訂單",
+                    data="action=ShowOrderStatus",
+                    display_text="查詢訂單"
+                )            
+            )
+        ]
+    richmenuid = linecc.Create_Rich_Menu(line_bot_api, 1536, 1024, "default_Rich_Menu", "主選單", areas)
+    print(f"rich_menu_id :{richmenuid}")
+    if(richmenuid):return True
+    else:return False
+```
+
+修改Server.py，以urllib.parse將data拆解為path與Value，如:
+
+```bash
+data:action=ShowProductList?pcid=16
+data.path = action=ShowProductList, datavalue = {'pcid': ['16']}
+```
+
+記得加上找不到產品類別的意外處理
+
+```python
+@handler.add(PostbackEvent)
+def handler_postback(event):
+    prof = line_bot_api.get_profile(event.source.user_id)
+    data = event.postback.data
+    # app.logger.debug(f"data:{data}")
+    if(data == 'action=ShowShoppingCartContents'):
+        cart_info, cart_amount = dbpm.QUY_Shopping_Cart_info_by_uid(event.source.user_id)
+        app.logger.debug(f"{prof.display_name} 查詢購物車, uid:{event.source.user_id}, {cart_info}")
+        replay_text = '\n'.join(str(v) for v in cart_info) + f"\n總共:{cart_amount}元"
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=replay_text)
+        )
+    else:
+        from urllib.parse import urlparse, parse_qs
+        datapath = urlparse(data).path
+        datavalue = parse_qs(urlparse(data).query)
+        if(datapath == "action=ShowProductList"):
+            pcid = datavalue.get('pcid')[0] or None
+            if(not pcid):
+                app.logger.error(f"錯誤:找不到pcid:{pcid}")
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=f"發生錯誤，請聯絡客服取得協助, 錯誤訊息:找不到pcid:{pcid}")
+                )
+            else:
+                replay_text = Handler.ShowProductListHandler(pcid) or "錯誤:action=ShowProductList Return None"
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=replay_text)
+                )
+```
+
+從資料庫中拉出product_name, product_decp, quantity, price, pid等欄位，並轉成List
+
+```python
+    def QUY_Products_info_by_pcid(self, pcid):
+        cur = self.conn.cursor()
+        query = sql.SQL("SELECT product_name, product_decp, quantity, price, pid FROM {} WHERE categoryid = %s").format(sql.Identifier('products'))
+        cur.execute(query, (pcid,))
+        prods = cur.fetchall()
+        cur.close()
+
+        if(prods):
+            return list(map(list, prods))
+        return None
+```
+
+Sample:
+
+```bash
+prod_list:[['原味蛋餅', '手工餅皮，原味蛋餅', 9999, 30, 27], ['起司蛋餅', '手工餅皮，起司蛋餅', 9999, 40, 28], ['培根蛋餅', '手工餅皮，培根蛋餅', 9999, 40, 29], [' 培根蛋三明治', '台式培根蛋三明治', 9999, 40, 30], ['鮪魚蛋三明治\n', '台式鮪魚蛋三明治', 9999, 40, 31], ['卡拉雞腿堡', '卡拉雞腿堡，含荷包蛋', 9999, 60, 32]]
+```
+
+加上可讀性
+
+OrderHandlier.py
+
+```python
+
+def ShowProductListHandler(pcid):
+    prod_list = dbpm.QUY_Products_info_by_pcid(pcid=pcid)
+    if(not prod_list):return None
+
+    info_list = []
+    for prod in prod_list:
+        info_list.append(f"【{prod[0]}】 餐點說明↓\n\n{prod[1]}\n\n庫存:{prod[2]}\t售價:{prod[3]}\t訂購代號:{prod[4]}\n")
+
+    return '\n'.join(str(v) for v in info_list)
+```
+
+Sample:
+
+![breakfastlist](readme/d27-01.png)
+![lunchlist](readme/d27-02.png)
+
+### d27總結
+
+應該還要加個產品有效期限檢查的，但今天有點急，明天做從Line進行放入購物車，購物車品項調整的功能，再看看還有沒有要加上去
