@@ -26,12 +26,12 @@ def OrderPayQueryHandler(resp:APIModel.ResOrderPayQuery):
 
 def ShowProductListHandler(pcid):
     prod_list = dbpm.QUY_Products_info_by_pcid(pcid=pcid)
-    app.logger.debug(f"prod_list:{prod_list}")
+    # app.logger.debug(f"prod_list:{prod_list}")
     if(not prod_list):return None
 
     info_list = []
     for prod in prod_list:
-        info_list.append(f"{prod[0]}\n\n{prod[1]}\n\n庫存:{prod[2]}\t售價:{prod[3]}\t訂購代號:{prod[4]}\n")
-    app.logger.debug(f"info_list:{info_list}")
+        info_list.append(f"【{prod[0]}】 餐點說明↓\n\n{prod[1]}\n\n庫存:{prod[2]}\t售價:{prod[3]}\t訂購代號:{prod[4]}\n")
+    # app.logger.debug(f"info_list:{info_list}")
 
     return '\n'.join(str(v) for v in info_list)
