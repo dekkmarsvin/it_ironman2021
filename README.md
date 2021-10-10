@@ -113,6 +113,9 @@
   - [[day27] PostBack資料data處理 顯示菜單](#day27-postback資料data處理-顯示菜單)
     - [實作PostBack Action參數傳遞](#實作postback-action參數傳遞)
     - [d27總結](#d27總結)
+  - [[day28] 更新購物車內品項](#day28-更新購物車內品項)
+    - [購物車品項修改/字串處理](#購物車品項修改字串處理)
+    - [實作購物車品項維護](#實作購物車品項維護)
 
 ## [Day1] 金融支付API
 
@@ -3089,3 +3092,141 @@ Sample:
 ### d27總結
 
 應該還要加個產品有效期限檢查的，但今天有點急，明天做從Line進行放入購物車，購物車品項調整的功能，再看看還有沒有要加上去
+
+## [day28] 更新購物車內品項
+
+昨天有改了Products表格，先換一下
+
+```sql
+-- Table: public.products
+
+-- DROP TABLE IF EXISTS public.products;
+
+CREATE TABLE IF NOT EXISTS public.products
+(
+    pid integer NOT NULL DEFAULT nextval('products_pid_seq'::regclass),
+    product_name text COLLATE pg_catalog."default" NOT NULL,
+    quantity integer NOT NULL,
+    product_decp text COLLATE pg_catalog."default",
+    createddate timestamp with time zone,
+    expireddate timestamp with time zone,
+    price integer NOT NULL DEFAULT 0,
+    categoryid integer NOT NULL,
+    CONSTRAINT products_pkey PRIMARY KEY (pid),
+    CONSTRAINT categoryid FOREIGN KEY (categoryid)
+        REFERENCES public.product_category (pcid) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+        NOT VALID,
+    CONSTRAINT "price must than zero" CHECK (price >= 0)
+)
+
+TABLESPACE pg_default;
+```
+
+### 購物車品項修改/字串處理
+
+在這邊系統會偵測Cart單字，進入對應的字串處理，購物車的控制指令格式 Cart {產品ID} +/-數量 || 直接設定數量，例如:
+
+- Cart 25 +1 --> 編號25的產品多一件
+- Cart 25 -1 --> 編號25的產品少一件
+- Cart 32 2 --> 編號32的產品兩件
+
+### 實作購物車品項維護
+
+資料庫處理dbPm.py
+
+```python
+
+    # 新增/設定商品數量至購物車
+    def INS_UPD_Prod_to_Cart(self, scid, pid, quantity):
+        cur = self.conn.cursor()
+        query = sql.SQL("SELECT quantity from {} where scid = %s and productid = %s").format(sql.Identifier('cart_items'))
+        cur.execute(query, (scid, pid))
+        qt = cur.fetchone()
+        cur.close()
+        if(qt):
+            cur = self.conn.cursor()
+            query = sql.SQL("UPDATE {} SET quantity=%s WHERE scid = %s and productid = %s").format(sql.Identifier('cart_items'))
+            cur.execute(query, (quantity, scid, pid))
+            self.conn.commit()
+            cur.close()
+        else:
+            cur = self.conn.cursor()
+            query = sql.SQL("INSERT INTO {}(scid, productid, quantity) VALUES (%s, %s, %s)").format(sql.Identifier('cart_items'))
+            cur.execute(query, (scid, pid, quantity))
+            self.conn.commit()
+            cur.close()
+
+    # 刪除購物車中數量=0的品項
+    def DEL_Shopping_Cart_items(self, scid):
+        cur = self.conn.cursor()
+        query = sql.SQL("DELETE FROM {} WHERE scid = %s and quantity = 0").format(sql.Identifier('cart_items'))
+        cur.execute(query, (scid,))
+        self.conn.commit()
+        cur.close()
+
+    # 查詢購物車中產品的數量
+    def QUY_Shopping_Cart_item_Quantity(self, productid, scid):
+        cur = self.conn.cursor()
+        query = sql.SQL("SELECT quantity FROM {} where scid = %s and productid = %s").format(sql.Identifier('cart_items'))
+        cur.execute(query, (scid, productid))
+        qt = cur.fetchone()
+        if(not qt):return 0
+        else:return qt[0]
+```
+
+Server.py，取出字串開頭是'cart '的文字訊息
+
+```python
+@handler.add(MessageEvent, message=TextMessage)
+def handle_message(event:MessageEvent):
+    prof = line_bot_api.get_profile(event.source.user_id)
+    dt = datetime.fromtimestamp(event.timestamp / 1000.0).astimezone(TWT)
+    format_time = dt.strftime("%Y/%m/%d %H:%M:%S")
+    app.logger.debug(f"message:{event.message.type}-{event.message.id} = {event.message.text}, from {event.source.type}:{prof.display_name}({event.source.user_id}) at {format_time}")
+    dbpm.INS_msg_log(event.message.id, event.message.type, event.message.text, dt.isoformat(), event.source.type, event.source.user_id)
+    user_type_text = str(event.message.text).lower()
+    if(user_type_text.startswith('cart ')):
+        msg = Handler.Control_Shopping_Cart_ViaMessageText(event.source.user_id, event.message.text)
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=msg))
+    else:
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="找不到對應的指令，請參考主選單-幫助"))
+```
+
+OrderHandler.py，進行字串處理，參數處理
+
+```python
+def Control_Shopping_Cart_ViaMessageText(uid, user_type_text):
+    split_text = user_type_text.split(' ')
+    if(len(split_text) > 3):return "錯誤的購物車指令\ncart \{要加入或變更的產品ID\} \{該產品的數量\}\n輸入數字不需要大括弧\{\}"
+    if(not split_text[1].isnumeric()):return "請輸入羅馬數字的產品ID"
+
+    scid = dbpm.INS_QUY_SC(uid)
+
+    if((split_text[2][0] == '+' or split_text[2][0] == '-') and split_text[2][1:].isnumeric()):
+        num = int(split_text[2])
+        new_qt = dbpm.QUY_Shopping_Cart_item_Quantity(split_text[1], scid) + num
+    elif(split_text[2].isnumeric()):
+        new_qt = int(split_text[2])
+    if(new_qt < 0):
+        new_qt = 0
+    app.logger.debug(f"{split_text[1]}, {new_qt}")
+    dbpm.INS_UPD_Prod_to_Cart(scid, split_text[1], new_qt)
+    p_name, p_price = dbpm.QUY_Prod_Name_and_Price_by_pid(split_text[1])
+    dbpm.DEL_Shopping_Cart_items(scid)
+    if(new_qt == 0):
+        return f"已將{p_name}自購物車中刪除"
+    else:
+        return f"已將{p_name}(單價:{p_price})的購買數量設定為{new_qt}"
+```
+
+結果:
+
+![talk-bot-d28](readme/d28-01.png)
+
+準備接上產生訂單跟查詢系統
