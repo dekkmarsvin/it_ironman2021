@@ -202,14 +202,7 @@ class DBPm:
         self.conn.commit()
         cur.close()
 
-    def UPD_Cart_items(self, scid, pid, quantity):
-        cur = self.conn.cursor()
-        query = sql.SQL("UPDATE {} SET quantity=%s WHERE scid = %s and productid = %s").format(sql.Identifier('cart_items'))
-        cur.execute(query, (quantity, scid, pid))
-        self.conn.commit()
-        cur.close()
-
-    def INS_Prod_to_Cart(self, scid, pid, quantity):
+    def INS_UPD_Prod_to_Cart(self, scid, pid, quantity):
         cur = self.conn.cursor()
         query = sql.SQL("SELECT quantity from {} where scid = %s and productid = %s").format(sql.Identifier('cart_items'))
         cur.execute(query, (scid, pid))
@@ -278,3 +271,18 @@ class DBPm:
         if(prods):
             return list(map(list, prods))
         return None
+
+    def DEL_Shopping_Cart_items(self, scid):
+        cur = self.conn.cursor()
+        query = sql.SQL("DELETE FROM {} WHERE pcid = %s and quantity = 0").format(sql.Identifier('cart_items'))
+        cur.execute(query, (scid,))
+        self.conn.commit()
+        cur.close()
+
+    def QUY_Shopping_Cart_item_Quantity(self, productid, scid):
+        cur = self.conn.cursor()
+        query = sql.SQL("SELECT quantity FROM {} where scid = %s and productid = %s").format(sql.Identifier('cart_items'))
+        cur.execute(query, (scid, productid))
+        qt = cur.fetchone()
+        if(not qt):return 0
+        else:return qt[0]

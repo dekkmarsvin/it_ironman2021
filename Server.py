@@ -82,9 +82,17 @@ def handle_message(event):
     format_time = dt.strftime("%Y/%m/%d %H:%M:%S")
     app.logger.debug(f"message:{event.message.type}-{event.message.id} = {event.message.text}, from {event.source.type}:{prof.display_name}({event.source.user_id}) at {format_time}")
     dbpm.INS_msg_log(event.message.id, event.message.type, event.message.text, dt.isoformat(), event.source.type, event.source.user_id)
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=event.message.text))
+    
+    user_type_text = str(event.messsage.text)
+    if(user_type_text.startswith('cart ')):
+        msg = Handler.Control_Shopping_Cart_ViaMessageText(event.message.id, event.message.text)
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=msg))
+    else:
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="找不到對應的指令，請參考主選單-幫助"))
 
 @handler.add(PostbackEvent)
 def handler_postback(event):
