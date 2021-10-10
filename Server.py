@@ -84,7 +84,7 @@ def handle_message(event:MessageEvent):
     dbpm.INS_msg_log(event.message.id, event.message.type, event.message.text, dt.isoformat(), event.source.type, event.source.user_id)
     user_type_text = str(event.message.text).lower()
     if(user_type_text.startswith('cart ')):
-        msg = Handler.Control_Shopping_Cart_ViaMessageText(event.message.id, event.message.text)
+        msg = Handler.Control_Shopping_Cart_ViaMessageText(event.source.user_id, event.message.text)
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(text=msg))
