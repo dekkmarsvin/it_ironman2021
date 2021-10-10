@@ -145,10 +145,9 @@ def init_orders(dbpm:DBPm, id=os.environ['Me'], yes=False):
     msg = GenApi.OrderCreate(neworder)
     print(msg)
 
-    print(f"建立訂單: 編號:{msg.OrderNo}:{prodlist}, 請款金額 = {tot_price}, 付款ID:{paid}, {msg.Description}", {msg.CardParam.CardPayURL})
-
     if(msg):
         if(msg.Status == 'S'):
+            print(f"建立訂單: 編號:{msg.OrderNo}:{prodlist}, 請款金額 = {tot_price}, 付款ID:{paid}, {msg.Description}", {msg.CardParam.CardPayURL})
             dbpm.UPD_payment_bypaid(paid=paid, tsno=msg.TSNo, ts_decp=msg.Description, ts_status=True, cardpayurl=msg.CardParam.CardPayURL)
             dbpm.UPD_Order_by_oid(paid=paid, ostatus="已產生付款請求", oid=oid)
             return True

@@ -252,7 +252,7 @@ class DBPm:
 
         shopping_list = self.QUY_Shopping_Cart_by_scid(scid)
         if(not shopping_list):
-            return False
+            return prodlist, tot_price
         for prod in shopping_list:
             product_name, product_price = self.QUY_Prod_Name_and_Price_by_pid(prod[0])
             prodlist.append(f"[產品ID:{prod[0]}] {product_name} * {prod[1]}")
