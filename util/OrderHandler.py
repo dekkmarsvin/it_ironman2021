@@ -44,7 +44,7 @@ def Control_Shopping_Cart_ViaMessageText(uid, user_type_text):
     scid = dbpm.INS_QUY_SC(uid)
 
     if((split_text[2][0] == '+' or split_text[2][0] == '-') and split_text[2][1:].isnumeric()):
-        num = int(split_text[2][0] + split_text[1:])
+        num = int(split_text[2][0] + split_text[2][1:])
         new_qt = dbpm.QUY_Shopping_Cart_item_Quantity(split_text[1], scid) + num
     elif(split_text[2].isnumeric()):
         new_qt = split_text[2]
