@@ -76,14 +76,13 @@ def handle_follow(event):
         TextSendMessage(text=msg))
 
 @handler.add(MessageEvent, message=TextMessage)
-def handle_message(event):
+def handle_message(event:MessageEvent):
     prof = line_bot_api.get_profile(event.source.user_id)
     dt = datetime.fromtimestamp(event.timestamp / 1000.0).astimezone(TWT)
     format_time = dt.strftime("%Y/%m/%d %H:%M:%S")
     app.logger.debug(f"message:{event.message.type}-{event.message.id} = {event.message.text}, from {event.source.type}:{prof.display_name}({event.source.user_id}) at {format_time}")
     dbpm.INS_msg_log(event.message.id, event.message.type, event.message.text, dt.isoformat(), event.source.type, event.source.user_id)
-    
-    user_type_text = str(event.messsage.text)
+    user_type_text = str(event.message.text).lower()
     if(user_type_text.startswith('cart ')):
         msg = Handler.Control_Shopping_Cart_ViaMessageText(event.message.id, event.message.text)
         line_bot_api.reply_message(
