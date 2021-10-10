@@ -211,7 +211,7 @@ class DBPm:
         if(qt):
             cur = self.conn.cursor()
             query = sql.SQL("UPDATE {} SET quantity=%s WHERE scid = %s and productid = %s").format(sql.Identifier('cart_items'))
-            cur.execute(query, (qt, scid, pid))
+            cur.execute(query, (quantity, scid, pid))
             self.conn.commit()
             cur.close()
         else:
