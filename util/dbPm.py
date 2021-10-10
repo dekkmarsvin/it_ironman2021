@@ -274,7 +274,7 @@ class DBPm:
 
     def DEL_Shopping_Cart_items(self, scid):
         cur = self.conn.cursor()
-        query = sql.SQL("DELETE FROM {} WHERE pcid = %s and quantity = 0").format(sql.Identifier('cart_items'))
+        query = sql.SQL("DELETE FROM {} WHERE scid = %s and quantity = 0").format(sql.Identifier('cart_items'))
         cur.execute(query, (scid,))
         self.conn.commit()
         cur.close()
