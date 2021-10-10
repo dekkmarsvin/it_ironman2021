@@ -209,7 +209,6 @@ class DBPm:
         qt = cur.fetchone()
         cur.close()
         if(qt):
-            qt = qt[0] + quantity
             cur = self.conn.cursor()
             query = sql.SQL("UPDATE {} SET quantity=%s WHERE scid = %s and productid = %s").format(sql.Identifier('cart_items'))
             cur.execute(query, (qt, scid, pid))
@@ -256,7 +255,7 @@ class DBPm:
             return False
         for prod in shopping_list:
             product_name, product_price = self.QUY_Prod_Name_and_Price_by_pid(prod[0])
-            prodlist.append(f"{product_name} * {prod[1]}")
+            prodlist.append(f"[產品ID:{prod[0]}] {product_name} * {prod[1]}")
             tot_price = tot_price + product_price * prod[1]
 
         return prodlist, tot_price
