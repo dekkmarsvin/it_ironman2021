@@ -2,7 +2,7 @@ import json
 from types import SimpleNamespace
 
 from linebot.models import (
-    PostbackAction, MessageAction, TemplateSendMessage, ConfirmTemplate
+    PostbackAction, MessageAction, TemplateSendMessage, ConfirmTemplate, URIAction, ButtonsTemplate
 )
 
 def ReqOrderCreate(ShopNo = "", OrderNo = "", Amount = 0, CurrencyID = "TWD", PrdtName = "", Memo = "", \
@@ -46,15 +46,18 @@ def ShoppingCartTemp(cart_info_text):
             text=cart_info_text,
             actions=[
                 PostbackAction(
-                    label='Proceeding Order',
+                    label='點我下訂單',
                     display_text='確認購物車OK，我要下訂單',
                     data='action=buy'
-                ),
-                MessageAction(
-                    label='Not Now',
-                    text='暫時不要'
                 )
             ]
         )
     )
     return confirm_order_message
+
+def OrderPayURLTemp(msg:ResOrderCreate):
+    OrderPayURL_template = ButtonsTemplate(
+        title='付款通知', text=f"訂單{msg.OrderNo}，總金額 {msg.Amount / 100}", actions=[
+            URIAction(label='點我付款', uri=msg.CardParam.CardPayURL),
+    ])
+    return OrderPayURL_template

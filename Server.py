@@ -127,6 +127,14 @@ def handler_postback(event):
                     event.reply_token,
                     TextSendMessage(text=replay_text)
                 )
+        elif(datapath == "action=buy"):
+            isSucc, msg = Handler.MakeOrder(event.source.user_id)
+            template_msg = APIModel.OrderPayURLTemp(msg)
+            if(isSucc):
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    template_msg
+                )
 
 
 @app.route('/')

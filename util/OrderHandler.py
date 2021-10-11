@@ -58,4 +58,49 @@ def Control_Shopping_Cart_ViaMessageText(uid, user_type_text):
         return f"已將{p_name}自購物車中刪除"
     else:
         return f"已將{p_name}(單價:{p_price})的購買數量設定為{new_qt}"
-    
+
+def MakeOrder(uid):
+    scid = dbpm.INS_QUY_SC(uid)
+    prodlist = []
+    tot_price = 0
+    shopping_list = dbpm.QUY_Shopping_Cart_by_scid(scid)
+    if(not shopping_list):
+        return False, "購物車內沒有商品喔"
+    for prod in shopping_list:
+        # print(f"商品:{prod[0]}, 數量:{prod[1]}")
+        current_quantity = dbpm.QUY_Prod_Quantity_by_pid(prod[0])
+        if(current_quantity - prod[1] < 0):
+            dbpm.UPD_Cart_items(scid, prod[0], current_quantity)
+            app.logger.error(f"商品{prod[0]}，庫存不足無法滿足訂單需求數量({prod[1]})")
+            return False, "部分商品庫存不足，請稍後重試"
+        else:
+            new_quantity = current_quantity - prod[1]
+            dbpm.UPD_Prod_Quantity(prod[0], new_quantity)
+            product_name, product_price = dbpm.QUY_Prod_Name_and_Price_by_pid(prod[0])
+            prodlist.append(f"{product_name} * {prod[1]}")
+            tot_price = tot_price + product_price * prod[1]
+
+    # 鎖定購物車 
+    dbpm.UPD_Shopping_Cart_lock_bY_scid(True, scid)
+
+    # 建立訂單
+    oid = dbpm.INS_Order(os.environ['Me'], scid, ostatus="初始化訂單")
+
+    # 建立信用卡付款交易編號
+    paid = dbpm.INS_payment_req('C-1', tot_price)
+    neworder = APIModel.ReqOrderCreate(ShopNo=os.environ['ShopNo'], OrderNo=oid, Amount=tot_price*100, \
+        PrdtName='IT鐵人賽虛擬商店', ReturnURL=os.environ['ReturnURL'], BackendURL=os.environ['BackendURL'], PayType="C")
+    msg = GenApi.OrderCreate(neworder)
+    app.logger.debug(f"MakeOrder:{msg}")
+
+    if(msg):
+        if(msg.Status == 'S'):
+            print(f"建立訂單: 編號:{msg.OrderNo}:{prodlist}, 請款金額 = {tot_price}, 付款ID:{paid}, {msg.Description}", {msg.CardParam.CardPayURL})
+            dbpm.UPD_payment_bypaid(paid=paid, tsno=msg.TSNo, ts_decp=msg.Description, ts_status=True, cardpayurl=msg.CardParam.CardPayURL)
+            dbpm.UPD_Order_by_oid(paid=paid, ostatus="已產生付款請求", oid=oid)
+            return True, msg.CardParam.CardPayURL
+        else:
+            dbpm.UPD_payment_bypaid(paid=paid, tsno=msg.TSNo, ts_decp=msg.Description, ts_status=False)
+            dbpm.UPD_Order_by_oid(paid=paid, ostatus="產生付款請求失敗", oid=oid)
+            dbpm.UPD_Shopping_Cart_lock_bY_scid(False, scid)
+    return False, "與金流系統通訊，建立訂單時發生錯誤"
