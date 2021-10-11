@@ -40,16 +40,19 @@ def ResOrderPayQuery(resp:str):
         PayDate = resp['TSResultContent']['PayDate'], MasterOrderNo = resp['TSResultContent'].get('MasterOrderNo')))
 
 def ShoppingCartTemp(cart_info_text):
-    confirm_order_message = ButtonsTemplate(
+    template_message = TemplateSendMessage(
+        alt_text='Buttons alt text', template=ButtonsTemplate(
         title='購物車明細', text=cart_info_text, actions=[
             PostbackAction(label='點我下訂單', display_text='確認購物車OK，我要下訂單', data='action=buy')
         ]
-    )
-    return confirm_order_message
+    ))
+    return template_message
 
 def OrderPayURLTemp(msg:ResOrderCreate):
-    OrderPayURL_template = ButtonsTemplate(
+    template_message = TemplateSendMessage(
+        alt_text='Buttons alt text', template=ButtonsTemplate(
         title='付款通知', text=f"訂單{msg.OrderNo}，總金額 {msg.Amount / 100}", actions=[
-            URIAction(label='點我付款', uri=msg.CardParam.CardPayURL),
-    ])
-    return OrderPayURL_template
+            URIAction(label='點我付款', uri=msg.CardParam.CardPayURL)
+        ]
+    ))
+    return template_message
