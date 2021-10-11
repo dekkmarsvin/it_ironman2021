@@ -42,7 +42,7 @@ def ResOrderPayQuery(resp:str):
 def ShoppingCartTemp(cart_info_text):
     template_message = TemplateSendMessage(
         alt_text='Buttons alt text', template=ButtonsTemplate(
-        title='購物車明細', text=cart_info_text, actions=[
+            text=cart_info_text, actions=[
             PostbackAction(label='點我下訂單', display_text='確認購物車OK，我要下訂單', data='action=buy')
         ]
     ))
