@@ -1,6 +1,10 @@
 import json
 from types import SimpleNamespace
 
+from linebot.models import (
+    PostbackAction, MessageAction, TemplateSendMessage, ConfirmTemplate
+)
+
 def ReqOrderCreate(ShopNo = "", OrderNo = "", Amount = 0, CurrencyID = "TWD", PrdtName = "", Memo = "", \
         Param1 = "", Param2 = "", Param3 = "", ReturnURL = "", BackendURL = "", PayType = "", ExpireDate = "", \
             AutoBilling = "Y", ExpBillingDays = 7, ExpMinutes = 10, PayTypeSub = "ONE"):
@@ -34,3 +38,23 @@ def ResOrderPayQuery(resp:str):
         Param2 = resp['TSResultContent']['Param2'], Param3 = resp['TSResultContent']['Param3'], LeftCCNo = resp['TSResultContent']['LeftCCNo'], \
         RightCCNo = resp['TSResultContent']['RightCCNo'], CCExpDate = resp['TSResultContent']['CCExpDate'], CCToken = resp['TSResultContent']['CCToken'], \
         PayDate = resp['TSResultContent']['PayDate'], MasterOrderNo = resp['TSResultContent'].get('MasterOrderNo')))
+
+def ShoppingCartTemp(cart_info_text):
+    confirm_order_message = TemplateSendMessage(
+        alt_text='Shopping Cart Confirm',
+        template=ConfirmTemplate(
+            text=cart_info_text,
+            actions=[
+                PostbackAction(
+                    label='Proceeding Order',
+                    display_text='確認購物車OK，我要下訂單',
+                    data='action=buy'
+                ),
+                MessageAction(
+                    label='Not Now',
+                    text='暫時不要'
+                )
+            ]
+        )
+    )
+    return confirm_order_message

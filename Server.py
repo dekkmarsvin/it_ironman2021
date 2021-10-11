@@ -11,12 +11,13 @@ from linebot.exceptions import (
     InvalidSignatureError
 )
 from linebot.models import (
-    MessageEvent, TextMessage, TextSendMessage, PostbackEvent
+    MessageEvent, TextMessage, TextSendMessage, PostbackEvent, PostbackAction, MessageAction
 )
 import os
 from linebot.models.events import FollowEvent
 import psycopg2
 import pytz
+from util import APIModel
 
 import util.dbPm as dbPm
 import util.GenApi as FunBizApi
@@ -102,9 +103,10 @@ def handler_postback(event):
         cart_info, cart_amount = dbpm.QUY_Shopping_Cart_info_by_uid(event.source.user_id)
         app.logger.debug(f"{prof.display_name} 查詢購物車, uid:{event.source.user_id}, {cart_info}")
         replay_text = '\n'.join(str(v) for v in cart_info) + f"\n總共:{cart_amount}元"
+        template_msg = APIModel.ShoppingCartTemp(replay_text)
         line_bot_api.reply_message(
             event.reply_token,
-            TextSendMessage(text=replay_text)
+            TextSendMessage(template_msg)
         )
     else:
         from urllib.parse import urlparse, parse_qs
@@ -126,6 +128,7 @@ def handler_postback(event):
                     event.reply_token,
                     TextSendMessage(text=replay_text)
                 )
+
 
 @app.route('/')
 def default_route():
