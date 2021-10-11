@@ -49,7 +49,6 @@ def ShoppingCartTemp(cart_info_text):
     return template_message
 
 def OrderPayURLTemp(msg):
-    print(msg)
     template_message = TemplateSendMessage(
         alt_text='Buttons alt text', template=ButtonsTemplate(
         title='付款通知', text=f"訂單{msg.OrderNo}，總金額 {msg.Amount / 100}", actions=[

@@ -116,6 +116,11 @@
   - [[day28] 更新購物車內品項](#day28-更新購物車內品項)
     - [購物車品項修改/字串處理](#購物車品項修改字串處理)
     - [實作購物車品項維護](#實作購物車品項維護)
+  - [[day29] 接上金流系統，串接建立訂單功能](#day29-接上金流系統串接建立訂單功能)
+    - [替購物車加上送出訂單按鈕](#替購物車加上送出訂單按鈕)
+    - [產生訂單](#產生訂單)
+    - [付款後通知使用者](#付款後通知使用者)
+    - [訂單流程執行結果](#訂單流程執行結果)
 
 ## [Day1] 金融支付API
 
@@ -3230,3 +3235,145 @@ def Control_Shopping_Cart_ViaMessageText(uid, user_type_text):
 ![talk-bot-d28](readme/d28-01.png)
 
 準備接上產生訂單跟查詢系統
+
+## [day29] 接上金流系統，串接建立訂單功能
+
+本日將完成從Line控制購物車品項，建立訂單，產生付款連結，通知付款人
+
+### 替購物車加上送出訂單按鈕
+
+傳送附帶按鈕的訊息，減少操作繁瑣，按鈕傳送一PostBackAction，通知伺服器執行產生訂單
+
+```python
+# APIModel.py
+def ShoppingCartTemp(cart_info_text):
+    template_message = TemplateSendMessage(
+        alt_text='Buttons alt text', template=ButtonsTemplate(
+            text=cart_info_text, actions=[
+            PostbackAction(label='點我下訂單', display_text='確認購物車OK，我要下訂單', data='action=buy')
+        ]
+    ))
+    return template_message
+
+# Server.py
+if(data == 'action=ShowShoppingCartContents'):
+    cart_info, cart_amount = dbpm.QUY_Shopping_Cart_info_by_uid(event.source.user_id)
+    app.logger.debug(f"{prof.display_name} 查詢購物車, uid:{event.source.user_id}, {cart_info}")
+    replay_text = '\n'.join(str(v) for v in cart_info) + f"\n總共:{cart_amount}元"
+    template_msg = APIModel.ShoppingCartTemp(replay_text)
+    line_bot_api.reply_message(
+        event.reply_token, template_msg
+    )
+```
+
+### 產生訂單
+
+訂單產生完成後，將傳送付款網址給使用者，記得預留訂單產生失敗的錯誤處理
+
+```python
+# Server.py
+if(datapath == "action=ShowProductList"):
+    .....
+# 新增一PostEvent功能處理
+elif(datapath == "action=buy"):
+    isSucc, msg = Handler.MakeOrder(event.source.user_id)
+    if(isSucc):
+        template_msg = APIModel.OrderPayURLTemp(msg)
+        line_bot_api.reply_message(
+            event.reply_token,
+            template_msg
+        )
+    else:
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=msg)
+        )
+
+# APIMode.py
+
+# 付款按鈕
+def OrderPayURLTemp(msg):
+    template_message = TemplateSendMessage(
+        alt_text='Buttons alt text', template=ButtonsTemplate(
+        title='付款通知', text=f"訂單{msg.OrderNo}，總金額 {msg.Amount / 100}", actions=[
+            URIAction(label='點我付款', uri=msg.CardParam.CardPayURL)
+        ]
+    ))
+    return template_message
+
+# OrderHandler.py
+def MakeOrder(uid):
+    scid = dbpm.INS_QUY_SC(uid)
+    prodlist = []
+    tot_price = 0
+    shopping_list = dbpm.QUY_Shopping_Cart_by_scid(scid)
+    if(not shopping_list):
+        return False, "購物車內沒有商品喔"
+    for prod in shopping_list:
+        # print(f"商品:{prod[0]}, 數量:{prod[1]}")
+        current_quantity = dbpm.QUY_Prod_Quantity_by_pid(prod[0])
+        if(current_quantity - prod[1] < 0):
+            dbpm.UPD_Cart_items(scid, prod[0], current_quantity)
+            app.logger.error(f"商品{prod[0]}，庫存不足無法滿足訂單需求數量({prod[1]})")
+            return False, "部分商品庫存不足，請稍後重試"
+        else:
+            new_quantity = current_quantity - prod[1]
+            dbpm.UPD_Prod_Quantity(prod[0], new_quantity)
+            product_name, product_price = dbpm.QUY_Prod_Name_and_Price_by_pid(prod[0])
+            prodlist.append(f"{product_name} * {prod[1]}")
+            tot_price = tot_price + product_price * prod[1]
+
+    # 鎖定購物車 
+    dbpm.UPD_Shopping_Cart_lock_bY_scid(True, scid)
+
+    # 建立訂單
+    oid = dbpm.INS_Order(os.environ['Me'], scid, ostatus="初始化訂單")
+
+    # 建立信用卡付款交易編號
+    paid = dbpm.INS_payment_req('C-1', tot_price)
+    neworder = APIModel.ReqOrderCreate(ShopNo=os.environ['ShopNo'], OrderNo=oid, Amount=tot_price*100, \
+        PrdtName='IT鐵人賽虛擬商店', ReturnURL=os.environ['ReturnURL'], BackendURL=os.environ['BackendURL'], PayType="C")
+    msg = GenApi.OrderCreate(neworder)
+    app.logger.debug(f"MakeOrder:{msg}")
+
+    if(msg):
+        if(msg.Status == 'S'):
+            print(f"建立訂單: 編號:{msg.OrderNo}:{prodlist}, 請款金額 = {tot_price}, 付款ID:{paid}, {msg.Description}", {msg.CardParam.CardPayURL})
+            dbpm.UPD_payment_bypaid(paid=paid, tsno=msg.TSNo, ts_decp=msg.Description, ts_status=True, cardpayurl=msg.CardParam.CardPayURL)
+            dbpm.UPD_Order_by_oid(paid=paid, ostatus="已產生付款請求", oid=oid)
+            return True, msg
+        else:
+            dbpm.UPD_payment_bypaid(paid=paid, tsno=msg.TSNo, ts_decp=msg.Description, ts_status=False)
+            dbpm.UPD_Order_by_oid(paid=paid, ostatus="產生付款請求失敗", oid=oid)
+            dbpm.UPD_Shopping_Cart_lock_bY_scid(False, scid)
+    return False, "與金流系統通訊，建立訂單時發生錯誤"
+```
+
+### 付款後通知使用者
+
+加上訂單付款後的處理
+
+```python
+# OrderHandler.py
+
+def OrderPayQueryHandler(resp:APIModel.ResOrderPayQuery, line_bot_api:LineBotApi):
+    app.logger.debug(f"ResOrderPayQuery:{resp}")
+    payinfo = resp.TSResultContent
+    if(payinfo.Status != 'S'):
+        dbpm.UPD_payment_bytsno(ispaid=False, paytoken=resp.PayToken, tsno=payinfo.TSNo, aptype=payinfo.APType)
+        app.logger.info(f"訂單付款失敗, 訂單編號:{payinfo.OrderNo} - {resp.Description}")
+        uid = dbpm.UPD_Order_status_by_oid(ostatus=f"付款失敗-{resp.Description}", oid = payinfo.OrderNo)
+        line_bot_api.push_message(uid, TextSendMessage(text=f"您的訂單{payinfo.OrderNo}付款失敗，原因可能為:\n{resp.Description}"))
+    else:
+        dbpm.UPD_payment_bytsno(ispaid=True, paytoken=resp.PayToken, tsno=payinfo.TSNo, aptype=payinfo.APType)
+        app.logger.info(f"訂單付款成功, 訂單編號:{payinfo.OrderNo} - {resp.Description}")
+        uid = dbpm.UPD_Order_status_by_oid(ostatus=f"付款成功-{resp.Description}", oid = payinfo.OrderNo)
+        line_bot_api.push_message(uid, TextSendMessage(text=f"您的訂單{payinfo.OrderNo}付款成功囉"))
+```
+
+### 訂單流程執行結果
+
+![img1](readme/29-1.jpeg)
+![img2](readme/d29-2.jpeg)
+
+明天做幾個小修正跟收尾，補充一點TODO
