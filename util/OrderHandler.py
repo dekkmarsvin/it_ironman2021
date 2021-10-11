@@ -1,4 +1,8 @@
 import os
+from linebot import LineBotApi
+from linebot.models import (
+    TextSendMessage
+)
 import psycopg2
 from psycopg2 import sql
 from flask import current_app as app
@@ -10,19 +14,19 @@ from util import APIModel
 
 dbpm = DBPm()
 
-def OrderPayQueryHandler(resp:APIModel.ResOrderPayQuery):
+def OrderPayQueryHandler(resp:APIModel.ResOrderPayQuery, line_bot_api:LineBotApi):
     app.logger.debug(f"ResOrderPayQuery:{resp}")
-
     payinfo = resp.TSResultContent
-    
     if(payinfo.Status != 'S'):
         dbpm.UPD_payment_bytsno(ispaid=False, paytoken=resp.PayToken, tsno=payinfo.TSNo, aptype=payinfo.APType)
         app.logger.info(f"訂單付款失敗, 訂單編號:{payinfo.OrderNo} - {resp.Description}")
-        dbpm.UPD_Order_status_by_oid(ostatus=f"付款失敗-{resp.Description}", oid = payinfo.OrderNo)
+        uid = dbpm.UPD_Order_status_by_oid(ostatus=f"付款失敗-{resp.Description}", oid = payinfo.OrderNo)
+        line_bot_api.push_message(uid, TextSendMessage(text=f"您的訂單{payinfo.OrderNo}付款失敗，原因可能為:\n{resp.Descriptio}"))
     else:
         dbpm.UPD_payment_bytsno(ispaid=True, paytoken=resp.PayToken, tsno=payinfo.TSNo, aptype=payinfo.APType)
         app.logger.info(f"訂單付款成功, 訂單編號:{payinfo.OrderNo} - {resp.Description}")
-        dbpm.UPD_Order_status_by_oid(ostatus=f"付款成功-{resp.Description}", oid = payinfo.OrderNo)
+        uid = dbpm.UPD_Order_status_by_oid(ostatus=f"付款成功-{resp.Description}", oid = payinfo.OrderNo)
+        line_bot_api.push_message(uid, TextSendMessage(text=f"您的訂單{payinfo.OrderNo}付款成功囉"))
 
 def ShowProductListHandler(pcid):
     prod_list = dbpm.QUY_Products_info_by_pcid(pcid=pcid)

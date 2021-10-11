@@ -239,10 +239,12 @@ class DBPm:
 
     def UPD_Order_status_by_oid(self, ostatus:str, oid):
         cur = self.conn.cursor()
-        query = sql.SQL("UPDATE {} SET ostatus=%s WHERE oid = %s").format(sql.Identifier('orders'))
+        query = sql.SQL("UPDATE {} SET ostatus=%s WHERE oid = %s RETURNING uid").format(sql.Identifier('orders'))
         cur.execute(query, (ostatus, oid))
+        uid = cur.fetchone()
         self.conn.commit()
         cur.close()
+        return uid[0]
 
     def QUY_Shopping_Cart_info_by_uid(self, uid):
         scid = self.INS_QUY_SC(uid)
