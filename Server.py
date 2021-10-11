@@ -105,8 +105,7 @@ def handler_postback(event):
         replay_text = '\n'.join(str(v) for v in cart_info) + f"\n總共:{cart_amount}元"
         template_msg = APIModel.ShoppingCartTemp(replay_text)
         line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(template_msg)
+            event.reply_token, template_msg
         )
     else:
         from urllib.parse import urlparse, parse_qs
