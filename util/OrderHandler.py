@@ -22,7 +22,7 @@ def OrderPayQueryHandler(resp:APIModel.ResOrderPayQuery, line_bot_api:LineBotApi
     if(payinfo.Status != 'S'):
         dbpm.UPD_payment_bytsno(ispaid=False, paytoken=resp.PayToken, tsno=payinfo.TSNo, aptype=payinfo.APType)
         app.logger.info(f"訂單{payinfo.Param1}付款失敗, 付款編號:{payinfo.OrderNo} - {payinfo.Description}")
-        uid = dbpm.UPD_Order_status_by_paid(ostatus=f"付款失敗-{resp.Description}", paid = payinfo.OrderNo)
+        uid = dbpm.UPD_Order_status_by_paid(ostatus=f"付款失敗-{payinfo.Description}", paid = payinfo.OrderNo)
         line_bot_api.push_message(uid, TextSendMessage(text=f"您的訂單: {payinfo.Param1} 付款失敗，原因可能為:\n{payinfo.Description}"))
     else:
         dbpm.UPD_payment_bytsno(ispaid=True, paytoken=resp.PayToken, tsno=payinfo.TSNo, aptype=payinfo.APType)
