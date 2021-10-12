@@ -171,6 +171,11 @@ def handler_postback(event):
                     if(isSucc):
                         if(paytype == "1"):
                             app.logger.debug(f"銀行轉帳(ATM)付款資訊:{msg}")
+                            template_msg = APIModel.OrderPayATMTemp(msg)
+                            line_bot_api.reply_message(
+                                event.reply_token,
+                                template_msg
+                            )
                         elif(paytype == "2"):
                             app.logger.debug(f"信用卡付款資訊:{msg}")
                             template_msg = APIModel.OrderPayURLTemp(msg)

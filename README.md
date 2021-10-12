@@ -121,6 +121,12 @@
     - [產生訂單](#產生訂單)
     - [付款後通知使用者](#付款後通知使用者)
     - [訂單流程執行結果](#訂單流程執行結果)
+  - [[day30] Line購物機器人 小總結與感想](#day30-line購物機器人-小總結與感想)
+    - [今日的品質更新 & 邏輯修正](#今日的品質更新--邏輯修正)
+      - [購物車品項檢查](#購物車品項檢查)
+      - [重作訂單產生流程](#重作訂單產生流程)
+      - [其他的修改](#其他的修改)
+    - [參賽感想 & 想做卻沒空做的功能](#參賽感想--想做卻沒空做的功能)
 
 ## [Day1] 金融支付API
 
@@ -3377,3 +3383,273 @@ def OrderPayQueryHandler(resp:APIModel.ResOrderPayQuery, line_bot_api:LineBotApi
 ![img2](readme/d29-2.jpeg)
 
 明天做幾個小修正跟收尾，補充一點TODO
+
+## [day30] Line購物機器人 小總結與感想
+
+今天的文章分為兩部分，一個是今天做完的部分修改，一部份是參賽感想
+
+### 今日的品質更新 & 邏輯修正
+
+我目前規劃做到的部分大概先暫時到從Line進行完整的購物流程，亦即
+
+1. 顯示商品列表
+2. 使用者進行購物車內品項的加減控制
+3. 建立訂單
+4. 付款結果通知等
+
+這部分在今天繼續更新一些功能上的修改
+
+#### 購物車品項檢查
+
+現在會拒絕庫存不足的品項加入購物車
+
+```python
+def Control_Shopping_Cart_ViaMessageText(uid, user_type_text):
+    split_text = user_type_text.split(' ')
+    if(len(split_text) > 3):return "錯誤的購物車指令\ncart \{要加入或變更的產品ID\} \{該產品的數量\}\n輸入數字不需要大括弧\{\}"
+    if(not split_text[1].isnumeric()):return "請輸入羅馬數字的產品ID"
+
+    scid = dbpm.INS_QUY_SC(uid)
+
+    if((split_text[2][0] == '+' or split_text[2][0] == '-') and split_text[2][1:].isnumeric()):
+        num = int(split_text[2])
+        new_qt = dbpm.QUY_Shopping_Cart_item_Quantity(split_text[1], scid) + num
+    elif(split_text[2].isnumeric()):
+        new_qt = int(split_text[2])
+    else:
+        return "請直接輸入訂購數量的羅馬數字，或是+/-符號加數字"
+
+    if(new_qt < 0):
+        new_qt = 0
+    # app.logger.debug(f"{split_text[1]}, {new_qt}")
+    p_name, p_price = dbpm.QUY_Prod_Name_and_Price_by_pid(split_text[1])
+    current_quantity = dbpm.QUY_Prod_Quantity_by_pid(split_text[1])
+    if(current_quantity >= new_qt):
+        dbpm.INS_UPD_Prod_to_Cart(scid, split_text[1], new_qt)
+        if(new_qt == 0):
+            dbpm.DEL_Shopping_Cart_items(scid)
+            return f"已將{p_name}自購物車中刪除"
+        else:
+            return f"已將{p_name}(單價:{p_price})的購買數量設定為{new_qt}"
+    else:
+        return f"{p_name}目前的庫存不足，無法加入購物車"
+```
+
+#### 重作訂單產生流程
+
+現在付款ID不會再綁定訂單，在付款成功前，使用者可以切換用什麼付款，以及加入庫存更新 & 購物車內物品庫存檢查，建立訂單流程:
+
+1. 使用者於顯示購物車列表，按下"點我下訂單"按鈕
+2. 產生PostBack Event，data = action=buy
+3. 接收data = action=buy的PostBack Event
+4. 如果沒有附帶參數，則進入建立訂單流程，檢查購物車品項與當前的系統庫存(MakeOrder_1_Check_Cart)
+5. 建立訂單資料紀錄(MakeOrder_2_Create_Order)，將訂單與使用者和購物車綁定()
+6. 提供按鈕以讓使用者選擇付款方式(銀行帳戶或信用卡)
+7. 產生PostBack Event，data = action=buy?oid=oid&scid=scid&paytype=paytype
+8. 接收PostBack Event，判定資料完整後進入，串接永豐銀行金流系統(MakeOrder_3_Request_Pay)，依照付款方式給予參數申請服務
+9. 接收自銀行的參數，傳送給使用者
+
+```python
+# Server.py
+
+elif(datapath == "action=buy"):
+    if(not datavalue):
+        isSucc, scidormsg = Handler.MakeOrder_1_Check_Cart(event.source.user_id)
+        app.logger.debug(f"建立訂單-檢查購物車, {isSucc}, {scidormsg}")
+        if(isSucc):
+            isSucc, oidormsg = Handler.MakeOrder_2_Create_Order(scidormsg, event.source.user_id)
+            if(isSucc):
+                template_msg = APIModel.OrderPaySelTemp(scidormsg, oidormsg)
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    template_msg
+                )
+            else:
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=oidormsg)
+                ) 
+        else:
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text=scidormsg)
+            )
+    else:
+        oid = datavalue.get('oid')[0]
+        scid = datavalue.get('scid')[0]
+        paytype = datavalue.get('paytype')[0]
+        app.logger.debug(f"訂單:{oid}(scid:{scid}), 選擇付款方式:{paytype}")
+        if(oid and scid and paytype):
+            isSucc, msg = Handler.MakeOrder_3_Request_Pay(oid, scid, paytype)
+            if(isSucc):
+                if(paytype == "1"):
+                    app.logger.debug(f"銀行轉帳(ATM)付款資訊:{msg}")
+                elif(paytype == "2"):
+                    app.logger.debug(f"信用卡付款資訊:{msg}")
+                    template_msg = APIModel.OrderPayURLTemp(msg)
+                    line_bot_api.reply_message(
+                        event.reply_token,
+                        template_msg
+                    )
+            else:
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=msg)
+                )
+        else:
+            app.logger.debug("建立訂單時參數錯誤", datavalue)
+
+# OrderHandler.py
+
+def MakeOrder_1_Check_Cart(uid):
+    scid = dbpm.INS_QUY_SC(uid)
+    isSucc, msg = CheckQuantity(scid)
+    if(isSucc):
+        dbpm.UPD_Shopping_Cart_lock_bY_scid(True, scid)
+        return True, scid
+    else:
+        return False, msg
+
+def CheckQuantity(scid):
+    shopping_list = dbpm.QUY_Shopping_Cart_by_scid(scid)
+    if(not shopping_list):
+        return False, "購物車內沒有商品喔"
+    for prod in shopping_list:
+        current_quantity = dbpm.QUY_Prod_Quantity_by_pid(prod[0])
+        if(current_quantity - prod[1] < 0):
+            dbpm.INS_UPD_Prod_to_Cart(scid, prod[0], current_quantity)
+            dbpm.DEL_Shopping_Cart_items(scid)
+            app.logger.warn(f"商品{prod[0]}，庫存不足無法滿足訂單需求數量({prod[1]})")
+            return False, "部分商品庫存不足，請稍後重試"
+    return True, None
+
+def MakeOrder_2_Create_Order(scid, uid):
+    try:
+        oid = dbpm.INS_Order(uid, scid, ostatus="初始化訂單")
+        return True, oid
+    except ExecError as Err:
+        app.logger.error(scid, uid, Err)
+        return False, f"建立訂單時發生錯誤\n{Err}"
+
+def MakeOrder_3_Request_Pay(oid, scid, paytype):
+    if(Check_order_ispaid(oid)):return False, "該筆訂單已完成付款"
+    shopping_list = dbpm.QUY_Shopping_Cart_by_scid(scid)
+    amount = 0
+    msg = None
+    for cart_item in shopping_list:
+        product_name, product_price = dbpm.QUY_Prod_Name_and_Price_by_pid(cart_item[0])
+        amount = amount + product_price * cart_item[1]
+    if(paytype == "1"):
+        # ATM
+        expiredate = (datetime.now() + timedelta(days = 1)).strftime("%Y%m%d")
+        paid = dbpm.INS_payment_req('ATM', amount)
+        neworder = APIModel.ReqOrderCreate(ShopNo=os.environ['ShopNo'], OrderNo=paid, Amount=amount*100, \
+        PrdtName='IT鐵人賽虛擬商店', Param1=oid, ReturnURL=os.environ['ReturnURL'], BackendURL=os.environ['BackendURL'], PayType="A", ExpireDate=expiredate)
+        msg = GenApi.OrderCreate(neworder)
+        app.logger.debug(f"MakeOrder:{msg}")
+    elif(paytype == "2"):
+        # 信用卡一次付清
+        paid = dbpm.INS_payment_req('C-1', amount)
+        neworder = APIModel.ReqOrderCreate(ShopNo=os.environ['ShopNo'], OrderNo=paid, Amount=amount*100, \
+        PrdtName='IT鐵人賽虛擬商店', Param1=oid, ReturnURL=os.environ['ReturnURL'], BackendURL=os.environ['BackendURL'], PayType="C")
+        msg = GenApi.OrderCreate(neworder)
+        app.logger.debug(f"MakeOrder:{msg}")
+
+    if(msg):
+        if(msg.Status == 'S'):
+            dbpm.UPD_payment_bypaid(paid=paid, tsno=msg.TSNo, ts_decp=msg.Description, ts_status=True, cardpayurl=msg.CardParam.CardPayURL)
+            dbpm.UPD_Order_by_oid(paid=paid, ostatus="已產生付款請求", oid=oid)
+            isSucc, errmsg = UpdateQuantity(shopping_list)
+            if(isSucc):
+                return True, msg
+            else:
+                return False, errmsg
+        else:
+            dbpm.UPD_payment_bypaid(paid=paid, tsno=msg.TSNo, ts_decp=msg.Description, ts_status=False)
+            dbpm.UPD_Order_by_oid(paid=paid, ostatus="產生付款請求失敗", oid=oid)
+            errmsg = f"與金流系統通訊時發生錯誤，{msg.Description}"
+    dbpm.UPD_Shopping_Cart_lock_bY_scid(False, scid)
+    return False, errmsg or "建立付款請求時發生錯誤"
+```
+
+#### 其他的修改
+
+付款通知的外層的Status只是訊息傳送的Status，與付款相關的參數都在TSResultContent，所以會出現外層Status是成功，內部卻是失敗的情況，修改API解析參數調用
+
+```python
+def OrderPayQueryHandler(resp:APIModel.ResOrderPayQuery, line_bot_api:LineBotApi):
+    app.logger.debug(f"ResOrderPayQuery:{resp}")
+    payinfo = resp.TSResultContent
+    if(payinfo.Status != 'S'):
+        dbpm.UPD_payment_bytsno(ispaid=False, paytoken=resp.PayToken, tsno=payinfo.TSNo, aptype=payinfo.APType)
+        app.logger.info(f"訂單{payinfo.Param1}付款失敗, 付款編號:{payinfo.OrderNo} - {payinfo.Description}")
+        uid = dbpm.UPD_Order_status_by_paid(ostatus=f"付款失敗-{payinfo.Description}", paid = payinfo.OrderNo)
+        line_bot_api.push_message(uid, TextSendMessage(text=f"您的訂單: {payinfo.Param1} 付款失敗，原因可能為:\n{payinfo.Description}"))
+    else:
+        dbpm.UPD_payment_bytsno(ispaid=True, paytoken=resp.PayToken, tsno=payinfo.TSNo, aptype=payinfo.APType)
+        app.logger.info(f"訂單{payinfo.Param1}付款成功, 付款編號:{payinfo.OrderNo} - {payinfo.Description}")
+        uid = dbpm.UPD_Order_status_by_paid(ostatus=f"付款成功-{payinfo.Description}", paid = payinfo.OrderNo)
+        line_bot_api.push_message(uid, TextSendMessage(text=f"您的訂單: {payinfo.Param1} 付款成功囉"))
+```
+
+依購物車更新庫存從建立訂單時變更，改為付款成功後才變更，比較符合常見的庫存邏輯
+
+```python
+def UpdateQuantity(shopping_list, mode = 1):
+    if(shopping_list):
+        try:
+            if(mode):
+                for prod in shopping_list:
+                    current_quantity = dbpm.QUY_Prod_Quantity_by_pid(prod[0])
+                    new_quantity = current_quantity - prod[1]
+                    dbpm.UPD_Prod_Quantity(prod[0], new_quantity)
+                    # app.logger.debug(f"pid:{prod[0]}, oldqt:{current_quantity}, newqt:{new_quantity}")
+            else:
+                for prod in shopping_list:
+                    current_quantity = dbpm.QUY_Prod_Quantity_by_pid(prod[0])
+                    new_quantity = current_quantity + prod[1]
+                    dbpm.UPD_Prod_Quantity(prod[0], new_quantity)
+            return True, None
+        except Exception as err:
+            return False, err
+    return False, f"shopping_list:{shopping_list}"
+```
+
+### 參賽感想 & 想做卻沒空做的功能
+
+30天，鐵腿了0rz
+
+老實說參賽最初的構想是摩斯卡App，誰知道後來變成Line訂餐機器人，只能說靈感就是這樣，因為中期想了一堆有的沒的的新功能，結果做不完哈哈
+
+本次鐵人賽，摸了一堆以前完全沒玩過的框架與功能需求，主要有
+
+1. 接入真實銀行的金流系統，處理API交互
+   1. 永豐FunBiz消費支付API
+2. 部屬雲端服務Heroku App，進行功能測試與開發部署
+   1. Python App
+   2. postgresql Database
+3. 架設Line機器人伺服器，處理各種訊息與提供服務
+   1. 與Line官方通訊
+   2. API授權憑證產生處理
+   3. 各種子功能
+      1. 追蹤者優惠券
+      2. 文字處理
+      3. PostBackEvent
+      4. .....
+
+其實最後一天還在想能加什麼功能，但想到BUG很多就還是趕緊改好品質更新，以下為想做卻還沒做的殘念部分:
+
+功能|說明|大概的構想
+---|---|---
+使用者教學|如何使用系統|拍攝影片或是給使用者一組測試的資料可供輸入
+查詢訂單|顯示近期訂單|分為一般使用者與管理人員兩種介面
+優化顯示|[Flex message](https://developers.line.biz/flex-simulator/)|現在的介面太醜啦
+網頁端的後台|控制庫存、出貨|目前訂單系統只寫了半套，還有一堆功能如出貨，訂單管理，之類的.....夢想太大
+
+2021鐵人賽暫時先到這邊告一段落，如果有問題，歡迎留言給我喔
+
+[2021鐵人賽 - GitHub](https://github.com/dekkmarsvin/it_ironman2021)
+
+Line機器人官方帳號ID:@171ssmku
+
+![botqr](/readme/d30.png)
