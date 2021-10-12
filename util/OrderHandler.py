@@ -94,10 +94,11 @@ def MakeOrder_3_Request_Pay(oid, paytype):
     shopping_list = dbpm.QUY_Shoppint_Cart_items_by_oid(oid)
     amount = 0
     msg = None
+    app.logger.debug(f"MakeOrder_3_Request_Pay({oid}, {paytype}, {type(oid)}, {type(paytype)})")
     for cart_item in shopping_list:
         product_name, product_price = dbpm.QUY_Prod_Name_and_Price_by_pid(cart_item[0])
         amount = amount + product_price * cart_item[1]
-    if(paytype == 1):
+    if(paytype == "1"):
         # ATM
         expiredate = (datetime.now() + timedelta(days = 1)).strftime("%Y%m%d")
         paid = dbpm.INS_payment_req('ATM', amount)
@@ -105,7 +106,7 @@ def MakeOrder_3_Request_Pay(oid, paytype):
         PrdtName='IT鐵人賽虛擬商店', ReturnURL=os.environ['ReturnURL'], BackendURL=os.environ['BackendURL'], PayType="A", ExpireDate=expiredate)
         msg = GenApi.OrderCreate(neworder)
         app.logger.debug(f"MakeOrder:{msg}")
-    elif(paytype == 2):
+    elif(paytype == "2"):
         # 信用卡一次付清
         paid = dbpm.INS_payment_req('C-1', amount)
         neworder = APIModel.ReqOrderCreate(ShopNo=os.environ['ShopNo'], OrderNo=oid, Amount=amount*100, \
