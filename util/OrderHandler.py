@@ -60,13 +60,17 @@ def Control_Shopping_Cart_ViaMessageText(uid, user_type_text):
     if(new_qt < 0):
         new_qt = 0
     # app.logger.debug(f"{split_text[1]}, {new_qt}")
-    dbpm.INS_UPD_Prod_to_Cart(scid, split_text[1], new_qt)
     p_name, p_price = dbpm.QUY_Prod_Name_and_Price_by_pid(split_text[1])
-    dbpm.DEL_Shopping_Cart_items(scid)
-    if(new_qt == 0):
-        return f"已將{p_name}自購物車中刪除"
+    current_quantity = dbpm.QUY_Prod_Quantity_by_pid(split_text[1])
+    if(current_quantity >= new_qt):
+        dbpm.INS_UPD_Prod_to_Cart(scid, split_text[1], new_qt)
+        if(new_qt == 0):
+            dbpm.DEL_Shopping_Cart_items(scid)
+            return f"已將{p_name}自購物車中刪除"
+        else:
+            return f"已將{p_name}(單價:{p_price})的購買數量設定為{new_qt}"
     else:
-        return f"已將{p_name}(單價:{p_price})的購買數量設定為{new_qt}"
+        return f"{p_name}目前的庫存不足，無法加入購物車"
 
 def MakeOrder_1_Check_Cart(uid):
     scid = dbpm.INS_QUY_SC(uid)
