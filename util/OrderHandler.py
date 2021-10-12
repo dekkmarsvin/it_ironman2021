@@ -93,6 +93,7 @@ def MakeOrder_2_Create_Order(scid, uid):
 def MakeOrder_3_Request_Pay(oid, paytype):
     shopping_list = dbpm.QUY_Shoppint_Cart_items_by_oid(oid)
     amount = 0
+    msg = None
     for cart_item in shopping_list:
         product_name, product_price = dbpm.QUY_Prod_Name_and_Price_by_pid(cart_item[0])
         amount = amount + product_price * cart_item[1]
