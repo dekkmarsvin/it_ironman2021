@@ -287,3 +287,13 @@ class DBPm:
         qt = cur.fetchone()
         if(not qt):return 0
         else:return qt[0]
+
+    def QUY_Shoppint_Cart_items_by_oid(self, oid):
+        cur = self.conn.cursor()
+        query = sql.SQL("select scid from {} where oid = %s").format(sql.Identifier('orders'))
+        cur.execute(query, (oid,))
+        scid = cur.fetchone()
+        if(scid):
+            return self.QUY_Shopping_Cart_by_scid(scid[0])
+        else:
+            return None

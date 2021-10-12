@@ -128,19 +128,64 @@ def handler_postback(event):
                     TextSendMessage(text=replay_text)
                 )
         elif(datapath == "action=buy"):
-            isSucc, msg = Handler.MakeOrder(event.source.user_id)
-            if(isSucc):
-                template_msg = APIModel.OrderPayURLTemp(msg)
-                line_bot_api.reply_message(
-                    event.reply_token,
-                    template_msg
-                )
+            # isSucc, msg = Handler.MakeOrder(event.source.user_id)
+            # if(isSucc):
+            #     template_msg = APIModel.OrderPayURLTemp(msg)
+            #     line_bot_api.reply_message(
+            #         event.reply_token,
+            #         template_msg
+            #     )
+            # else:
+            #     line_bot_api.reply_message(
+            #         event.reply_token,
+            #         TextSendMessage(text=msg)
+            #     )
+            if(not datavalue):
+                isSucc, scidormsg = Handler.MakeOrder_1_Check_Cart(event.source.user_id)
+                app.logger.debug(f"建立訂單-檢查購物車", isSucc, scidormsg)
+                if(isSucc):
+                    isSucc, oidormsg = Handler.MakeOrder_2_Create_Order(scidormsg, event.source.user_id)
+                    if(isSucc):
+                        template_msg = APIModel.OrderPaySelTemp(scidormsg, oidormsg)
+                        line_bot_api.reply_message(
+                            event.reply_token,
+                            template_msg
+                        )
+                    else:
+                        line_bot_api.reply_message(
+                            event.reply_token,
+                            TextSendMessage(text=oidormsg)
+                        ) 
+                else:
+                    line_bot_api.reply_message(
+                        event.reply_token,
+                        TextSendMessage(text=scidormsg)
+                    )
             else:
-                line_bot_api.reply_message(
-                    event.reply_token,
-                    TextSendMessage(text=msg)
-                )
-
+                oid = datavalue.get('oid')[0]
+                scid = datavalue.get('scid')[0]
+                paytype = datavalue.get('paytype')[0]
+                app.logger.debug(f"訂單:{oid}(scid:{scid}), 選擇付款方式:{paytype}")
+                if(oid and scid and paytype):
+                    isSucc, msg = Handler.MakeOrder_3_Request_Pay(oid, paytype)
+                    if(isSucc):
+                        if(paytype == 1):
+                            app.logger.debug(f"銀行轉帳(ATM)付款資訊:{msg}")
+                        elif(paytype == 2):
+                            app.logger.debug(f"信用卡付款資訊:{msg}")
+                            template_msg = APIModel.OrderPayURLTemp(msg)
+                            line_bot_api.reply_message(
+                                event.reply_token,
+                                template_msg
+                            )
+                    else:
+                        line_bot_api.reply_message(
+                            event.reply_token,
+                            TextSendMessage(text=msg)
+                        )
+                else:
+                    app.logger.debug("建立訂單時參數錯誤", datavalue)
+                    
 @app.route('/')
 def default_route():
     """Default route"""

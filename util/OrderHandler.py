@@ -1,4 +1,6 @@
+from ast import Try
 import os
+from shutil import ExecError
 from linebot import LineBotApi
 from linebot.models import (
     TextSendMessage
@@ -62,6 +64,61 @@ def Control_Shopping_Cart_ViaMessageText(uid, user_type_text):
         return f"已將{p_name}自購物車中刪除"
     else:
         return f"已將{p_name}(單價:{p_price})的購買數量設定為{new_qt}"
+
+def MakeOrder_1_Check_Cart(uid):
+    scid = dbpm.INS_QUY_SC(uid)
+    shopping_list = dbpm.QUY_Shopping_Cart_by_scid(scid)
+    if(not shopping_list):
+        return False, "購物車內沒有商品喔"
+    for prod in shopping_list:
+        current_quantity = dbpm.QUY_Prod_Quantity_by_pid(prod[0])
+        if(current_quantity - prod[1] < 0):
+            dbpm.UPD_Cart_items(scid, prod[0], current_quantity)
+            app.logger.error(f"商品{prod[0]}，庫存不足無法滿足訂單需求數量({prod[1]})")
+            return False, "部分商品庫存不足，請稍後重試"
+    dbpm.UPD_Shopping_Cart_lock_bY_scid(True, scid)
+    return True, scid
+
+def MakeOrder_2_Create_Order(scid, uid):
+    try:
+        oid = dbpm.INS_Order(uid, scid, ostatus="初始化訂單")
+        return True, oid
+    except ExecError as Err:
+        app.logger.error(scid, uid, Err)
+        return False, f"建立訂單時發生錯誤\n{Err}"
+
+def MakeOrder_3_Request_Pay(oid, paytype):
+    shopping_list = dbpm.QUY_Shoppint_Cart_items_by_oid(oid)
+    amount = 0
+    for cart_item in shopping_list:
+        product_name, product_price = dbpm.QUY_Prod_Name_and_Price_by_pid(cart_item[0])
+        amount = amount + product_price * cart_item[1]
+    if(paytype == 1):
+        # ATM
+        expiredate = (datetime.now() + timedelta(days = 1)).strftime("%Y%m%d")
+        paid = dbpm.INS_payment_req('ATM', amount)
+        neworder = APIModel.ReqOrderCreate(ShopNo=os.environ['ShopNo'], OrderNo=oid, Amount=amount*100, \
+        PrdtName='IT鐵人賽虛擬商店', ReturnURL=os.environ['ReturnURL'], BackendURL=os.environ['BackendURL'], PayType="A", ExpireDate=expiredate)
+        msg = GenApi.OrderCreate(neworder)
+        app.logger.debug(f"MakeOrder:{msg}")
+    elif(paytype == 2):
+        # 信用卡一次付清
+        paid = dbpm.INS_payment_req('C-1', amount)
+        neworder = APIModel.ReqOrderCreate(ShopNo=os.environ['ShopNo'], OrderNo=oid, Amount=amount*100, \
+        PrdtName='IT鐵人賽虛擬商店', ReturnURL=os.environ['ReturnURL'], BackendURL=os.environ['BackendURL'], PayType="C")
+        msg = GenApi.OrderCreate(neworder)
+        app.logger.debug(f"MakeOrder:{msg}")
+
+    if(msg):
+        if(msg.Status == 'S'):
+            dbpm.UPD_payment_bypaid(paid=paid, tsno=msg.TSNo, ts_decp=msg.Description, ts_status=True, cardpayurl=msg.CardParam.CardPayURL)
+            dbpm.UPD_Order_by_oid(paid=paid, ostatus="已產生付款請求", oid=oid)
+            return True, msg
+        else:
+            dbpm.UPD_payment_bypaid(paid=paid, tsno=msg.TSNo, ts_decp=msg.Description, ts_status=False)
+            dbpm.UPD_Order_by_oid(paid=paid, ostatus="產生付款請求失敗", oid=oid)
+            return False, f"與金流系統通訊時發生錯誤，{msg.Description}"
+    return False, "建立付款請求時發生錯誤"
 
 def MakeOrder(uid):
     scid = dbpm.INS_QUY_SC(uid)

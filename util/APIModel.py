@@ -41,7 +41,7 @@ def ResOrderPayQuery(resp:str):
 
 def ShoppingCartTemp(cart_info_text):
     template_message = TemplateSendMessage(
-        alt_text='Buttons alt text', template=ButtonsTemplate(
+        alt_text='購物車資訊', template=ButtonsTemplate(
             text=cart_info_text, actions=[
             PostbackAction(label='點我下訂單', display_text='確認購物車OK，我要下訂單', data='action=buy')
         ]
@@ -50,9 +50,31 @@ def ShoppingCartTemp(cart_info_text):
 
 def OrderPayURLTemp(msg):
     template_message = TemplateSendMessage(
-        alt_text='Buttons alt text', template=ButtonsTemplate(
+        alt_text='訂單付款', template=ButtonsTemplate(
         title='付款通知', text=f"訂單{msg.OrderNo}，總金額 {msg.Amount / 100}", actions=[
             URIAction(label='點我付款', uri=msg.CardParam.CardPayURL)
         ]
     ))
+    return template_message
+
+def OrderPayATMTemp(msg):
+    template_message = TemplateSendMessage(
+        alt_text='訂單付款', template=ButtonsTemplate(
+            text=f"訂單{msg.OrderNo}，總金額 {msg.Amount / 100}", actions=[
+                URIAction(label='WebATM', uri=msg.ATMParam.WebAtmURL),
+                URIAction(label='OPT', uri=msg.ATMParam.OtpURL)
+            ]
+        )
+    )
+    return template_message
+
+def OrderPaySelTemp(scid, oid):
+    template_message = TemplateSendMessage(
+        alt_text='請選擇付款方式', template=ButtonsTemplate(
+            title='付款方式', text="請選擇付款方式", actions=[
+                PostbackAction(label='轉帳付款', display_text="使用轉帳付款", data=f'action=buy?scid={scid}?oid={oid}?paytype=1'),
+                PostbackAction(label='信用卡', display_text="使用信用卡", data=f'action=buy?scid={scid}?oid={oid}?paytype=2')
+            ]
+        )
+    )
     return template_message
