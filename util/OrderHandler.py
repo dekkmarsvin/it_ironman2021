@@ -22,12 +22,12 @@ def OrderPayQueryHandler(resp:APIModel.ResOrderPayQuery, line_bot_api:LineBotApi
     if(payinfo.Status != 'S'):
         dbpm.UPD_payment_bytsno(ispaid=False, paytoken=resp.PayToken, tsno=payinfo.TSNo, aptype=payinfo.APType)
         app.logger.info(f"訂單付款失敗, 訂單編號:{payinfo.OrderNo} - {resp.Description}")
-        uid = dbpm.UPD_Order_status_by_oid(ostatus=f"付款失敗-{resp.Description}", oid = payinfo.OrderNo)
+        uid = dbpm.UPD_Order_status_by_paid(ostatus=f"付款失敗-{resp.Description}", paid = payinfo.OrderNo)
         line_bot_api.push_message(uid, TextSendMessage(text=f"您的訂單{payinfo.OrderNo}付款失敗，原因可能為:\n{resp.Description}"))
     else:
         dbpm.UPD_payment_bytsno(ispaid=True, paytoken=resp.PayToken, tsno=payinfo.TSNo, aptype=payinfo.APType)
         app.logger.info(f"訂單付款成功, 訂單編號:{payinfo.OrderNo} - {resp.Description}")
-        uid = dbpm.UPD_Order_status_by_oid(ostatus=f"付款成功-{resp.Description}", oid = payinfo.OrderNo)
+        uid = dbpm.UPD_Order_status_by_paid(ostatus=f"付款成功-{resp.Description}", paid = payinfo.OrderNo)
         line_bot_api.push_message(uid, TextSendMessage(text=f"您的訂單{payinfo.OrderNo}付款成功囉"))
 
 def ShowProductListHandler(pcid):
@@ -107,14 +107,14 @@ def MakeOrder_3_Request_Pay(oid, scid, paytype):
         # ATM
         expiredate = (datetime.now() + timedelta(days = 1)).strftime("%Y%m%d")
         paid = dbpm.INS_payment_req('ATM', amount)
-        neworder = APIModel.ReqOrderCreate(ShopNo=os.environ['ShopNo'], OrderNo=oid, Amount=amount*100, \
+        neworder = APIModel.ReqOrderCreate(ShopNo=os.environ['ShopNo'], OrderNo=paid, Amount=amount*100, \
         PrdtName='IT鐵人賽虛擬商店', ReturnURL=os.environ['ReturnURL'], BackendURL=os.environ['BackendURL'], PayType="A", ExpireDate=expiredate)
         msg = GenApi.OrderCreate(neworder)
         app.logger.debug(f"MakeOrder:{msg}")
     elif(paytype == "2"):
         # 信用卡一次付清
         paid = dbpm.INS_payment_req('C-1', amount)
-        neworder = APIModel.ReqOrderCreate(ShopNo=os.environ['ShopNo'], OrderNo=oid, Amount=amount*100, \
+        neworder = APIModel.ReqOrderCreate(ShopNo=os.environ['ShopNo'], OrderNo=paid, Amount=amount*100, \
         PrdtName='IT鐵人賽虛擬商店', ReturnURL=os.environ['ReturnURL'], BackendURL=os.environ['BackendURL'], PayType="C")
         msg = GenApi.OrderCreate(neworder)
         app.logger.debug(f"MakeOrder:{msg}")
