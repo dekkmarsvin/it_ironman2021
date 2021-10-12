@@ -45,7 +45,7 @@ def ShowProductListHandler(pcid):
 def Control_Shopping_Cart_ViaMessageText(uid, user_type_text):
     split_text = user_type_text.split(' ')
     if(len(split_text) > 3):return "錯誤的購物車指令\ncart \{要加入或變更的產品ID\} \{該產品的數量\}\n輸入數字不需要大括弧\{\}"
-    if(not split_text[1].isnumeric()):return "請輸入羅馬數字的產品ID"
+    if(not split_text[1].isnumeric() or not split_text[2].isnumeric()):return "請輸入羅馬數字的產品ID"
 
     scid = dbpm.INS_QUY_SC(uid)
 
