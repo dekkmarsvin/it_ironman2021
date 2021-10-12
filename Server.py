@@ -142,7 +142,7 @@ def handler_postback(event):
             #     )
             if(not datavalue):
                 isSucc, scidormsg = Handler.MakeOrder_1_Check_Cart(event.source.user_id)
-                app.logger.debug(f"建立訂單-檢查購物車", isSucc, scidormsg)
+                app.logger.debug(f"建立訂單-檢查購物車, {isSucc}, {scidormsg}")
                 if(isSucc):
                     isSucc, oidormsg = Handler.MakeOrder_2_Create_Order(scidormsg, event.source.user_id)
                     if(isSucc):
