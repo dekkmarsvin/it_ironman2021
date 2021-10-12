@@ -59,7 +59,7 @@ def Control_Shopping_Cart_ViaMessageText(uid, user_type_text):
 
     if(new_qt < 0):
         new_qt = 0
-    app.logger.debug(f"{split_text[1]}, {new_qt}")
+    # app.logger.debug(f"{split_text[1]}, {new_qt}")
     dbpm.INS_UPD_Prod_to_Cart(scid, split_text[1], new_qt)
     p_name, p_price = dbpm.QUY_Prod_Name_and_Price_by_pid(split_text[1])
     dbpm.DEL_Shopping_Cart_items(scid)
@@ -82,7 +82,7 @@ def MakeOrder_1_Check_Cart(uid):
     # for prod in shopping_list:
     #     current_quantity = dbpm.QUY_Prod_Quantity_by_pid(prod[0])
     #     if(current_quantity - prod[1] < 0):
-    #         dbpm.UPD_Cart_items(scid, prod[0], current_quantity)
+    #         dbpm.INS_UPD_Prod_to_Cart(scid, prod[0], current_quantity)
     #         app.logger.error(f"商品{prod[0]}，庫存不足無法滿足訂單需求數量({prod[1]})")
     #         return False, "部分商品庫存不足，請稍後重試"
 
@@ -144,7 +144,7 @@ def CheckQuantity(scid):
     for prod in shopping_list:
         current_quantity = dbpm.QUY_Prod_Quantity_by_pid(prod[0])
         if(current_quantity - prod[1] < 0):
-            dbpm.UPD_Cart_items(scid, prod[0], current_quantity)
+            dbpm.INS_UPD_Prod_to_Cart(scid, prod[0], current_quantity)
             app.logger.warn(f"商品{prod[0]}，庫存不足無法滿足訂單需求數量({prod[1]})")
             return False, "部分商品庫存不足，請稍後重試"
     return True, None
@@ -179,7 +179,7 @@ def MakeOrder(uid):
         # print(f"商品:{prod[0]}, 數量:{prod[1]}")
         current_quantity = dbpm.QUY_Prod_Quantity_by_pid(prod[0])
         if(current_quantity - prod[1] < 0):
-            dbpm.UPD_Cart_items(scid, prod[0], current_quantity)
+            dbpm.INS_UPD_Prod_to_Cart(scid, prod[0], current_quantity)
             app.logger.error(f"商品{prod[0]}，庫存不足無法滿足訂單需求數量({prod[1]})")
             return False, "部分商品庫存不足，請稍後重試"
         else:
