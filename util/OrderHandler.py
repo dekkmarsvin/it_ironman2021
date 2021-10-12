@@ -70,17 +70,21 @@ def Control_Shopping_Cart_ViaMessageText(uid, user_type_text):
 
 def MakeOrder_1_Check_Cart(uid):
     scid = dbpm.INS_QUY_SC(uid)
-    shopping_list = dbpm.QUY_Shopping_Cart_by_scid(scid)
-    if(not shopping_list):
-        return False, "購物車內沒有商品喔"
-    for prod in shopping_list:
-        current_quantity = dbpm.QUY_Prod_Quantity_by_pid(prod[0])
-        if(current_quantity - prod[1] < 0):
-            dbpm.UPD_Cart_items(scid, prod[0], current_quantity)
-            app.logger.error(f"商品{prod[0]}，庫存不足無法滿足訂單需求數量({prod[1]})")
-            return False, "部分商品庫存不足，請稍後重試"
-    dbpm.UPD_Shopping_Cart_lock_bY_scid(True, scid)
-    return True, scid
+    isSucc, msg = CheckQuantity(scid)
+    if(isSucc):
+        dbpm.UPD_Shopping_Cart_lock_bY_scid(True, scid)
+        return True, scid
+    else:
+        return False, msg
+    # shopping_list = dbpm.QUY_Shopping_Cart_by_scid(scid)
+    # if(not shopping_list):
+    #     return False, "購物車內沒有商品喔"
+    # for prod in shopping_list:
+    #     current_quantity = dbpm.QUY_Prod_Quantity_by_pid(prod[0])
+    #     if(current_quantity - prod[1] < 0):
+    #         dbpm.UPD_Cart_items(scid, prod[0], current_quantity)
+    #         app.logger.error(f"商品{prod[0]}，庫存不足無法滿足訂單需求數量({prod[1]})")
+    #         return False, "部分商品庫存不足，請稍後重試"
 
 def MakeOrder_2_Create_Order(scid, uid):
     try:
@@ -90,8 +94,9 @@ def MakeOrder_2_Create_Order(scid, uid):
         app.logger.error(scid, uid, Err)
         return False, f"建立訂單時發生錯誤\n{Err}"
 
-def MakeOrder_3_Request_Pay(oid, paytype):
-    shopping_list = dbpm.QUY_Shoppint_Cart_items_by_oid(oid)
+def MakeOrder_3_Request_Pay(oid, scid, paytype):
+    # shopping_list = dbpm.QUY_Shoppint_Cart_items_by_oid(oid)
+    shopping_list = dbpm.QUY_Shopping_Cart_by_scid(scid)
     amount = 0
     msg = None
     app.logger.debug(f"MakeOrder_3_Request_Pay({oid}, {paytype}, {type(oid)}, {type(paytype)})")
@@ -122,8 +127,40 @@ def MakeOrder_3_Request_Pay(oid, paytype):
         else:
             dbpm.UPD_payment_bypaid(paid=paid, tsno=msg.TSNo, ts_decp=msg.Description, ts_status=False)
             dbpm.UPD_Order_by_oid(paid=paid, ostatus="產生付款請求失敗", oid=oid)
-            return False, f"與金流系統通訊時發生錯誤，{msg.Description}"
-    return False, "建立付款請求時發生錯誤"
+            errmsg = f"與金流系統通訊時發生錯誤，{msg.Description}"
+    dbpm.UPD_Shopping_Cart_lock_bY_scid(False, scid)
+    return False, errmsg or "建立付款請求時發生錯誤"
+
+def CheckQuantity(scid):
+    shopping_list = dbpm.QUY_Shopping_Cart_by_scid(scid)
+    if(not shopping_list):
+        return False, "購物車內沒有商品喔"
+    for prod in shopping_list:
+        current_quantity = dbpm.QUY_Prod_Quantity_by_pid(prod[0])
+        if(current_quantity - prod[1] < 0):
+            dbpm.UPD_Cart_items(scid, prod[0], current_quantity)
+            app.logger.warn(f"商品{prod[0]}，庫存不足無法滿足訂單需求數量({prod[1]})")
+            return False, "部分商品庫存不足，請稍後重試"
+    return True, None
+
+def UpdateQuantity(shopping_list, mode = 1):
+    if(shopping_list):
+        try:
+            if(mode):
+                for prod in shopping_list:
+                    current_quantity = dbpm.QUY_Prod_Quantity_by_pid(prod[0])
+                    new_quantity = current_quantity - prod[1]
+                    dbpm.UPD_Prod_Quantity(prod[0], new_quantity)
+                    return True, None
+            else:
+                for prod in shopping_list:
+                    current_quantity = dbpm.QUY_Prod_Quantity_by_pid(prod[0])
+                    new_quantity = current_quantity + prod[1]
+                    dbpm.UPD_Prod_Quantity(prod[0], new_quantity)
+                    return True, None
+        except Exception as err:
+            return False, err
+    return False, f"shopping_list:{shopping_list}"
 
 def MakeOrder(uid):
     scid = dbpm.INS_QUY_SC(uid)

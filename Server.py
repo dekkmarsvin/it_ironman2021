@@ -167,7 +167,7 @@ def handler_postback(event):
                 paytype = datavalue.get('paytype')[0]
                 app.logger.debug(f"訂單:{oid}(scid:{scid}), 選擇付款方式:{paytype}")
                 if(oid and scid and paytype):
-                    isSucc, msg = Handler.MakeOrder_3_Request_Pay(oid, paytype)
+                    isSucc, msg = Handler.MakeOrder_3_Request_Pay(oid, scid, paytype)
                     if(isSucc):
                         if(paytype == "1"):
                             app.logger.debug(f"銀行轉帳(ATM)付款資訊:{msg}")
