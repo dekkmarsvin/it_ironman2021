@@ -309,7 +309,7 @@ class DBPm:
 
     def QUY_IsPaid_by_paid(self, paid):
         cur = self.conn.cursor()
-        query = sql.SQL("select ispad from {} where paid = %s").format(sql.Identifier('payment_log'))
+        query = sql.SQL("select ispaid from {} where paid = %s").format(sql.Identifier('payment_log'))
         cur.execute(query, (paid,))
         ispaid = cur.fetchone()
         if(ispaid):
