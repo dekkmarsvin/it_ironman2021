@@ -169,9 +169,9 @@ def handler_postback(event):
                 if(oid and scid and paytype):
                     isSucc, msg = Handler.MakeOrder_3_Request_Pay(oid, paytype)
                     if(isSucc):
-                        if(paytype == 1):
+                        if(paytype == "1"):
                             app.logger.debug(f"銀行轉帳(ATM)付款資訊:{msg}")
-                        elif(paytype == 2):
+                        elif(paytype == "2"):
                             app.logger.debug(f"信用卡付款資訊:{msg}")
                             template_msg = APIModel.OrderPayURLTemp(msg)
                             line_bot_api.reply_message(
