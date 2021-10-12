@@ -145,6 +145,7 @@ def CheckQuantity(scid):
         current_quantity = dbpm.QUY_Prod_Quantity_by_pid(prod[0])
         if(current_quantity - prod[1] < 0):
             dbpm.INS_UPD_Prod_to_Cart(scid, prod[0], current_quantity)
+            dbpm.DEL_Shopping_Cart_items(scid)
             app.logger.warn(f"商品{prod[0]}，庫存不足無法滿足訂單需求數量({prod[1]})")
             return False, "部分商品庫存不足，請稍後重試"
     return True, None
