@@ -51,7 +51,7 @@ def ShoppingCartTemp(cart_info_text):
 def OrderPayURLTemp(msg):
     template_message = TemplateSendMessage(
         alt_text='訂單付款', template=ButtonsTemplate(
-        title='付款通知', text=f"訂單{msg.OrderNo}，總金額 {msg.Amount / 100}", actions=[
+        title='付款通知', text=f"訂單編號:{msg.Param1}，總金額 {msg.Amount / 100}\n付款流水號:{msg.OrderNo}", actions=[
             URIAction(label='點我付款', uri=msg.CardParam.CardPayURL)
         ]
     ))

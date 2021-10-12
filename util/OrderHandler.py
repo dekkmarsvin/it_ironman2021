@@ -21,14 +21,14 @@ def OrderPayQueryHandler(resp:APIModel.ResOrderPayQuery, line_bot_api:LineBotApi
     payinfo = resp.TSResultContent
     if(payinfo.Status != 'S'):
         dbpm.UPD_payment_bytsno(ispaid=False, paytoken=resp.PayToken, tsno=payinfo.TSNo, aptype=payinfo.APType)
-        app.logger.info(f"訂單付款失敗, 訂單編號:{payinfo.OrderNo} - {resp.Description}")
+        app.logger.info(f"訂單{payinfo.Param1}付款失敗, 付款編號:{payinfo.OrderNo} - {resp.Description}")
         uid = dbpm.UPD_Order_status_by_paid(ostatus=f"付款失敗-{resp.Description}", paid = payinfo.OrderNo)
-        line_bot_api.push_message(uid, TextSendMessage(text=f"您的訂單{payinfo.OrderNo}付款失敗，原因可能為:\n{resp.Description}"))
+        line_bot_api.push_message(uid, TextSendMessage(text=f"您的訂單: {payinfo.Param1} 付款失敗，原因可能為:\n{resp.Description}"))
     else:
         dbpm.UPD_payment_bytsno(ispaid=True, paytoken=resp.PayToken, tsno=payinfo.TSNo, aptype=payinfo.APType)
-        app.logger.info(f"訂單付款成功, 訂單編號:{payinfo.OrderNo} - {resp.Description}")
+        app.logger.info(f"訂單{payinfo.Param1}付款成功, 付款編號:{payinfo.OrderNo} - {resp.Description}")
         uid = dbpm.UPD_Order_status_by_paid(ostatus=f"付款成功-{resp.Description}", paid = payinfo.OrderNo)
-        line_bot_api.push_message(uid, TextSendMessage(text=f"您的訂單{payinfo.OrderNo}付款成功囉"))
+        line_bot_api.push_message(uid, TextSendMessage(text=f"您的訂單: {payinfo.Param1} 付款成功囉"))
 
 def ShowProductListHandler(pcid):
     prod_list = dbpm.QUY_Products_info_by_pcid(pcid=pcid)
@@ -99,7 +99,7 @@ def MakeOrder_3_Request_Pay(oid, scid, paytype):
     shopping_list = dbpm.QUY_Shopping_Cart_by_scid(scid)
     amount = 0
     msg = None
-    app.logger.debug(f"MakeOrder_3_Request_Pay({oid}, {paytype}, {type(oid)}, {type(paytype)})")
+    # app.logger.debug(f"MakeOrder_3_Request_Pay({oid}, {paytype}, {type(oid)}, {type(paytype)})")
     for cart_item in shopping_list:
         product_name, product_price = dbpm.QUY_Prod_Name_and_Price_by_pid(cart_item[0])
         amount = amount + product_price * cart_item[1]
@@ -108,14 +108,14 @@ def MakeOrder_3_Request_Pay(oid, scid, paytype):
         expiredate = (datetime.now() + timedelta(days = 1)).strftime("%Y%m%d")
         paid = dbpm.INS_payment_req('ATM', amount)
         neworder = APIModel.ReqOrderCreate(ShopNo=os.environ['ShopNo'], OrderNo=paid, Amount=amount*100, \
-        PrdtName='IT鐵人賽虛擬商店', ReturnURL=os.environ['ReturnURL'], BackendURL=os.environ['BackendURL'], PayType="A", ExpireDate=expiredate)
+        PrdtName='IT鐵人賽虛擬商店', Param1=oid, ReturnURL=os.environ['ReturnURL'], BackendURL=os.environ['BackendURL'], PayType="A", ExpireDate=expiredate)
         msg = GenApi.OrderCreate(neworder)
         app.logger.debug(f"MakeOrder:{msg}")
     elif(paytype == "2"):
         # 信用卡一次付清
         paid = dbpm.INS_payment_req('C-1', amount)
         neworder = APIModel.ReqOrderCreate(ShopNo=os.environ['ShopNo'], OrderNo=paid, Amount=amount*100, \
-        PrdtName='IT鐵人賽虛擬商店', ReturnURL=os.environ['ReturnURL'], BackendURL=os.environ['BackendURL'], PayType="C")
+        PrdtName='IT鐵人賽虛擬商店', Param1=oid, ReturnURL=os.environ['ReturnURL'], BackendURL=os.environ['BackendURL'], PayType="C")
         msg = GenApi.OrderCreate(neworder)
         app.logger.debug(f"MakeOrder:{msg}")
 
@@ -155,7 +155,7 @@ def UpdateQuantity(shopping_list, mode = 1):
                     current_quantity = dbpm.QUY_Prod_Quantity_by_pid(prod[0])
                     new_quantity = current_quantity - prod[1]
                     dbpm.UPD_Prod_Quantity(prod[0], new_quantity)
-                    app.logger.debug(f"pid:{prod[0]}, oldqt:{current_quantity}, newqt:{new_quantity}")
+                    # app.logger.debug(f"pid:{prod[0]}, oldqt:{current_quantity}, newqt:{new_quantity}")
             else:
                 for prod in shopping_list:
                     current_quantity = dbpm.QUY_Prod_Quantity_by_pid(prod[0])
