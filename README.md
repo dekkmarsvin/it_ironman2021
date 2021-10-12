@@ -3650,6 +3650,8 @@ def UpdateQuantity(shopping_list, mode = 1):
 
 [2021鐵人賽 - GitHub](https://github.com/dekkmarsvin/it_ironman2021)
 
+[建立資料庫SQL](https://github.com/dekkmarsvin/it_ironman2021/blob/main/data/finaldb.sql)
+
 Line機器人官方帳號ID:@171ssmku
 
 ![botqr](/readme/d30.png)
