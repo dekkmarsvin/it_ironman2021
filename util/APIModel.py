@@ -72,8 +72,8 @@ def OrderPaySelTemp(scid, oid):
     template_message = TemplateSendMessage(
         alt_text='請選擇付款方式', template=ButtonsTemplate(
             title='付款方式', text="請選擇付款方式", actions=[
-                PostbackAction(label='轉帳付款', display_text="使用轉帳付款", data=f'action=buy?scid={scid}?oid={oid}?paytype=1'),
-                PostbackAction(label='信用卡', display_text="使用信用卡", data=f'action=buy?scid={scid}?oid={oid}?paytype=2')
+                PostbackAction(label='轉帳付款', display_text="使用轉帳付款", data=f'action=buy?scid={scid}&oid={oid}&paytype=1'),
+                PostbackAction(label='信用卡', display_text="使用信用卡", data=f'action=buy?scid={scid}&oid={oid}&paytype=2')
             ]
         )
     )
