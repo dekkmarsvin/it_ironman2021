@@ -156,13 +156,12 @@ def UpdateQuantity(shopping_list, mode = 1):
                     new_quantity = current_quantity - prod[1]
                     dbpm.UPD_Prod_Quantity(prod[0], new_quantity)
                     app.logger.debug(f"pid:{prod[0]}, oldqt:{current_quantity}, newqt:{new_quantity}")
-                    return True, None
             else:
                 for prod in shopping_list:
                     current_quantity = dbpm.QUY_Prod_Quantity_by_pid(prod[0])
                     new_quantity = current_quantity + prod[1]
                     dbpm.UPD_Prod_Quantity(prod[0], new_quantity)
-                    return True, None
+            return True, None
         except Exception as err:
             return False, err
     return False, f"shopping_list:{shopping_list}"
