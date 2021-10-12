@@ -123,7 +123,11 @@ def MakeOrder_3_Request_Pay(oid, scid, paytype):
         if(msg.Status == 'S'):
             dbpm.UPD_payment_bypaid(paid=paid, tsno=msg.TSNo, ts_decp=msg.Description, ts_status=True, cardpayurl=msg.CardParam.CardPayURL)
             dbpm.UPD_Order_by_oid(paid=paid, ostatus="已產生付款請求", oid=oid)
-            return True, msg
+            isSucc, errmsg = UpdateQuantity(shopping_list)
+            if(isSucc):
+                return True, msg
+            else:
+                return False, errmsg
         else:
             dbpm.UPD_payment_bypaid(paid=paid, tsno=msg.TSNo, ts_decp=msg.Description, ts_status=False)
             dbpm.UPD_Order_by_oid(paid=paid, ostatus="產生付款請求失敗", oid=oid)
@@ -151,6 +155,7 @@ def UpdateQuantity(shopping_list, mode = 1):
                     current_quantity = dbpm.QUY_Prod_Quantity_by_pid(prod[0])
                     new_quantity = current_quantity - prod[1]
                     dbpm.UPD_Prod_Quantity(prod[0], new_quantity)
+                    app.logger.debug(f"pid:{prod[0]}, oldqt:{current_quantity}, newqt:{new_quantity}")
                     return True, None
             else:
                 for prod in shopping_list:
