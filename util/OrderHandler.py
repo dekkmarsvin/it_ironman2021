@@ -95,6 +95,8 @@ def MakeOrder_2_Create_Order(scid, uid):
         return False, f"建立訂單時發生錯誤\n{Err}"
 
 def MakeOrder_3_Request_Pay(oid, scid, paytype):
+    if(Check_order_ispaid(oid)):return False, "該筆訂單已完成付款"
+
     # shopping_list = dbpm.QUY_Shoppint_Cart_items_by_oid(oid)
     shopping_list = dbpm.QUY_Shopping_Cart_by_scid(scid)
     amount = 0
@@ -211,3 +213,11 @@ def MakeOrder(uid):
             dbpm.UPD_Order_by_oid(paid=paid, ostatus="產生付款請求失敗", oid=oid)
             dbpm.UPD_Shopping_Cart_lock_bY_scid(False, scid)
     return False, "與金流系統通訊，建立訂單時發生錯誤"
+
+def Check_order_ispaid(oid):
+    paid = dbpm.QUY_paid_by_oid(oid)
+    if(paid):
+        ispaid = dbpm.QUY_IsPaid_by_paid(paid)
+        if(ispaid):
+            return True
+    return False

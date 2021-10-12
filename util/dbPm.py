@@ -306,3 +306,21 @@ class DBPm:
             return self.QUY_Shopping_Cart_by_scid(scid[0])
         else:
             return None
+
+    def QUY_IsPaid_by_paid(self, paid):
+        cur = self.conn.cursor()
+        query = sql.SQL("select ispad from {} where paid = %s").format(sql.Identifier('payment_log'))
+        cur.execute(query, (paid,))
+        ispaid = cur.fetchone()
+        if(ispaid):
+            return ispaid[0]
+        return None
+
+    def QUY_paid_by_oid(self, oid):
+        cur = self.conn.cursor()
+        query = sql.SQL("select paid from {} where oid = %s").format(sql.Identifier('orders'))
+        cur.execute(query, (oid,))
+        paid = cur.fetchone()
+        if(paid):
+            return paid[0]
+        return None
