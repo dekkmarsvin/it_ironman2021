@@ -198,7 +198,7 @@ def MakeOrder(uid):
     dbpm.UPD_Shopping_Cart_lock_bY_scid(True, scid)
 
     # 建立訂單
-    oid = dbpm.INS_Order(os.environ['Me'], scid, ostatus="初始化訂單")
+    oid = dbpm.INS_Order(uid, scid, ostatus="初始化訂單")
 
     # 建立信用卡付款交易編號
     paid = dbpm.INS_payment_req('C-1', tot_price)
